@@ -1,0 +1,221 @@
+<?php 
+/**
+ * implementation of Hook_menu
+ */
+function upc_users_sync_menu() {
+  $items = array();
+  $items['users_sync/check'] = array(
+    'title' => 'Check',
+    'page callback' => '_user_check',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  $items['users_sync/user_create'] = array(
+    'title' => 'Crear cuenta',
+    'page callback' => '_user_create',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  $items['users_sync/user_spread'] = array(
+    'title' => 'Spread Users',
+    'page callback' => '_user_spread',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  /*$items['users_sync/test'] = array(
+    'title' => 'test',
+    'page callback' => '_user_test',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );*/
+
+  return $items;
+}
+/**
+ * Activate this on hook_login
+ */
+function _user_check() {
+  $user = _get_remote_user();
+  dpm($user);
+  return 'check';
+}
+/*function _user_test() {
+  global $user;
+  _user_spread($user); 
+  #dpm($user);
+  return 'test';
+}*/
+/**
+ * This is a copy of _bakery_register_submit without the redirection
+ */
+function _user_register_submit($form, &$form_state) {
+  $user_info = $form_state['values'];
+// Create an array of fields to send to the master. We need these four fields.    
+  $allowed = array('name', 'mail', 'pass', 'timezone'); 
+  foreach ($form_state['values'] as $key => $value) {   
+    if (!in_array($key, $allowed)) {                    
+      unset($form_state['values'][$key]);
+    } 
+  } 
+  // Remove unneeded values.                          
+  form_state_values_clean($form_state);              
+  // Save values to cookie.
+  $data = $form_state['values'];                     
+  // Store name and email in case of error and return from master.
+  $_SESSION['bakery']['register'] = array(           
+    'name' => $data['name'],
+    'mail' => $data['mail'],
+  );
+  // Create cookie and redirect to master.             
+  bakery_bake_oatmeal_cookie($data['name'], $data);    
+  //
+  dpm($user_info);
+  _user_spread($user_info);
+
+
+  //drupal_goto(variable_get('bakery_master', 'http://drupal.org/') . 'bakery');
+}
+/**
+ * Implementation of hook_user_login
+ *
+ */
+function upc_users_sync_user_login(&$edit, $account) {
+  #dpm($edit);
+  #dpm($account);
+ 
+}
+/**
+ * Implementation of hook_form_alter
+ * Triggers _user_check function when submitting the register form
+ */
+function upc_users_sync_form_alter(&$form, $form_state, $form_id) {
+  if($form_id == 'user_register_form') {
+    $form['#submit'] = array();
+    //overrides default and bakery submit functions
+    $form['#submit'][] = 'user_register_submit'; //graba en local
+    $form['#submit'][] = '_user_register_submit'; //graba en master
+  }
+}
+/**
+ * Create or update User
+ */
+function _user_create($uid = null){
+  if(!empty($uid)) {
+    //update user
+    $remote_user = _get_remote_user();
+    $user = user_load($uid);
+    //map information here
+
+    #user_save($user);
+    return $user->uid;
+  } else {
+    //create user
+    $remote_user = _get_remote_user();
+
+    #user_save($user);
+    return $user->uid;
+  }
+}
+/**
+ * Get local User
+ * Load local user by email or username
+ * @return string uid
+ */
+function _get_local_user(){
+  //check by mail
+  if(!empty($_POST['email'])) { 
+    $user = user_load_by_email($_POST['email']);
+    //check by username
+    if(empty($user) && !empty($_POST['name'])) {
+      $user = user_load_by_name($_POST['name']);
+    }
+    if(!empty($user)) {
+      return $user->uid;
+    }
+    return false;
+  }
+}
+/**
+ * Get Remote User
+ * Get remote user from post, unserialize to object.
+ * @return Remote User Object
+ */
+function _get_remote_user() {
+  $user = unserialize($_POST); 
+  dpm($user);
+  return $user;
+}
+/**
+ * Spread users to
+ * Decide which sites are we spreading users to
+ * If this is master, spread to slaves.
+ * If this is slave spread to master.
+ */
+function _user_spread($user) {
+  if(!empty($user)) {
+    $user_object = serialize($user);
+    if(_is_master()) {
+      //spread to slaves
+      $slaves = _get_slaves();
+      //spreading to self site
+      $current_site = 'http://'.$_SERVER['SERVER_NAME'];
+      foreach ($slaves as $url) {
+        if($url != $current_site) {
+          _user_spread_to($user_object, $url);
+        }
+      }
+    } else {
+      //spread to master
+      $url = _get_master();
+      _user_spread_to($user_object, $url);
+    }
+  }
+}
+function _user_spread_to($user_object, $url) {
+  $options = array(
+      'headers' => array('Content-Type' => 'application/x-www-form-urlencoded; charset=utf-8'),
+      'method' => 'POST',
+      'data' => $user_object,
+      );
+  $result = drupal_http_request($url .'users_sync/check', $options);
+  if ($result->code != 200) {
+    drupal_set_message(t('Error %error for site at %url', array('%error' => $result->code .' '. $result->error, '%url' => $url)));
+  }
+  else {
+    drupal_set_message($result->data);
+  }
+}
+/**
+ * Slaves Sites
+ * Sites where we want to create users
+ * @return array of slave sites.
+ */
+function _get_slaves() {
+  return variable_get('bakery_slaves', array());
+}
+/**
+ * Master Site
+ * @return string master site
+ */
+function _get_master() {
+  return variable_get('bakery_master', 'http://www.upc.edu.pe/');
+}
+/**
+ * Is Master?
+ * Is this the master Site
+ * @return TRUE/FALSE
+ */
+function _is_master() {
+  return variable_get('bakery_is_master', 0);
+}
+/**
+ * Secret Key
+ * @return md5 string for crosssite verification
+ */
+function _secret_key() {
+  //this is shared by all sites
+  $key = variable_get('bakery_key', '');
+  //@TODO add security measures here
+  //maybe $key + time:minute 
+  return md5($key);
+}

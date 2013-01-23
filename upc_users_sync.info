@@ -1,0 +1,5 @@
+name = Sincronizacion de usuarios UPC
+description = Sincronización de usuarios en UPC, EPG, EPE.
+core = 7.x
+package = UPC
+version = 7.x-0.6
