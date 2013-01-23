@@ -127,7 +127,7 @@ function _user_spread($user) {
   }
 }
 function _user_spread_to($user_object, $url) {
-  $options = array(
+  /*$options = array(
       'headers' => array('Content-Type' => 'application/x-www-form-urlencoded; charset=utf-8'),
       'method' => 'POST',
       //'data' => http_build_query($user_object),
@@ -135,13 +135,24 @@ function _user_spread_to($user_object, $url) {
       'data' => 'val1=value&val2=value',
       );
   $result = drupal_http_request($url .'users_sync/check', $options);
-  dpm($result);
   if ($result->code != 200) {
     drupal_set_message(t('Error %error for site at %url', array('%error' => $result->code .' '. $result->error, '%url' => $url)));
   }
   else {
     drupal_set_message($result->data);
-  }
+  }*/
+  //cURL version
+  $curl = curl_init();
+  curl_setopt_array($curl, array(
+    CURLOPT_RETURNTRANSFER => 1,
+    CURLOPT_URL => $url . 'users_sync/check',
+    CURLOPT_POST => 1,
+    CURLOPT_POSTFIELDS => array(
+        'user' => $user_object,
+        'test' => 'value',
+    )
+  ));
+  $resp = curl_exec($curl);
 }
 /**
  * Get local User
