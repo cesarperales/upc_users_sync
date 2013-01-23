@@ -31,6 +31,7 @@ function _user_check() {
   $user = _get_remote_user();
   dpm($user);
   dpm($_POST);
+  error_log(print_r($_POST,1));
   return 'check';
 }
 /**
