@@ -22,13 +22,6 @@ function upc_users_sync_menu() {
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
-  /*$items['users_sync/test'] = array(
-    'title' => 'test',
-    'page callback' => '_user_test',
-    'access callback' => TRUE,
-    'type' => MENU_CALLBACK,
-  );*/
-
   return $items;
 }
 /**
@@ -37,52 +30,42 @@ function upc_users_sync_menu() {
 function _user_check() {
   $user = _get_remote_user();
   dpm($user);
+  dpm($_POST);
   return 'check';
 }
-/*function _user_test() {
-  global $user;
-  _user_spread($user); 
-  #dpm($user);
-  return 'test';
-}*/
 /**
- * This is a copy of _bakery_register_submit without the redirection
+ * This is a copy of _bakery_register_submit without the redirection.
  */
 function _user_register_submit($form, &$form_state) {
   $user_info = $form_state['values'];
-// Create an array of fields to send to the master. We need these four fields.    
-  $allowed = array('name', 'mail', 'pass', 'timezone'); 
-  foreach ($form_state['values'] as $key => $value) {   
-    if (!in_array($key, $allowed)) {                    
+// Create an array of fields to send to the master. We need these four fields.
+  $allowed = array('name', 'mail', 'pass', 'timezone');
+  foreach ($form_state['values'] as $key => $value) {
+    if (!in_array($key, $allowed)) {
       unset($form_state['values'][$key]);
-    } 
-  } 
-  // Remove unneeded values.                          
-  form_state_values_clean($form_state);              
+    }
+  }
+  // Remove unneeded values.
+  form_state_values_clean($form_state);
   // Save values to cookie.
-  $data = $form_state['values'];                     
+  $data = $form_state['values'];
   // Store name and email in case of error and return from master.
-  $_SESSION['bakery']['register'] = array(           
+  $_SESSION['bakery']['register'] = array(
     'name' => $data['name'],
     'mail' => $data['mail'],
   );
   // Create cookie and redirect to master.             
-  bakery_bake_oatmeal_cookie($data['name'], $data);    
+  bakery_bake_oatmeal_cookie($data['name'], $data);
   //
-  dpm($user_info);
   _user_spread($user_info);
-
-
   //drupal_goto(variable_get('bakery_master', 'http://drupal.org/') . 'bakery');
 }
 /**
  * Implementation of hook_user_login
- *
  */
 function upc_users_sync_user_login(&$edit, $account) {
   #dpm($edit);
   #dpm($account);
- 
 }
 /**
  * Implementation of hook_form_alter
@@ -117,35 +100,6 @@ function _user_create($uid = null){
   }
 }
 /**
- * Get local User
- * Load local user by email or username
- * @return string uid
- */
-function _get_local_user(){
-  //check by mail
-  if(!empty($_POST['email'])) { 
-    $user = user_load_by_email($_POST['email']);
-    //check by username
-    if(empty($user) && !empty($_POST['name'])) {
-      $user = user_load_by_name($_POST['name']);
-    }
-    if(!empty($user)) {
-      return $user->uid;
-    }
-    return false;
-  }
-}
-/**
- * Get Remote User
- * Get remote user from post, unserialize to object.
- * @return Remote User Object
- */
-function _get_remote_user() {
-  $user = unserialize($_POST); 
-  dpm($user);
-  return $user;
-}
-/**
  * Spread users to
  * Decide which sites are we spreading users to
  * If this is master, spread to slaves.
@@ -178,12 +132,41 @@ function _user_spread_to($user_object, $url) {
       'data' => $user_object,
       );
   $result = drupal_http_request($url .'users_sync/check', $options);
+  dpm($result);
   if ($result->code != 200) {
     drupal_set_message(t('Error %error for site at %url', array('%error' => $result->code .' '. $result->error, '%url' => $url)));
   }
   else {
     drupal_set_message($result->data);
   }
+}
+/**
+ * Get local User
+ * Load local user by email or username
+ * @return string uid
+ */
+function _get_local_user(){
+  //check by mail
+  if(!empty($_POST['email'])) { 
+    $user = user_load_by_email($_POST['email']);
+    //check by username
+    if(empty($user) && !empty($_POST['name'])) {
+      $user = user_load_by_name($_POST['name']);
+    }
+    if(!empty($user)) {
+      return $user->uid;
+    }
+    return false;
+  }
+}
+/**
+ * Get Remote User
+ * Get remote user from post, unserialize to object.
+ * @return Remote User Object
+ */
+function _get_remote_user() {
+  $user = unserialize($_POST); 
+  return $user;
 }
 /**
  * Slaves Sites
