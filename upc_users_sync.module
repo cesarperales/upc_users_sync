@@ -123,17 +123,17 @@ function _user_spread($form, $form_state, $op) {
       $current_site = 'http://'.$_SERVER['SERVER_NAME'];
       foreach ($slaves as $url) {
         if($url != $current_site) {
-          _user_spread_to($form, $form_state, $op, $url);
+          _user_spread_to($form, $form_state, $op);
         }
       }
     } else {
       //spread to master
       $url = _get_master();
-      _user_spread_to($form, $form_state, $op, $url);
+      _user_spread_to($form, $form_state, $op);
     }
   }
 }
-function _user_spread_to($form, $form_state, $op, $url) {
+function _user_spread_to($form, $form_state, $op) {
   //cURL version
   $curl = curl_init();
   curl_setopt_array($curl, array(
@@ -141,7 +141,7 @@ function _user_spread_to($form, $form_state, $op, $url) {
     CURLOPT_URL => $url . 'users_sync/check',
     CURLOPT_POST => 1,
     CURLOPT_POSTFIELDS => array(
-        'url' => $url,
+        'url' => 'http://' . $_SERVER['SERVER_NAME'] ,
         'form' => serialize($form),
         'form_state' => serialize($form_state),
         'op' => $op, 
