@@ -32,7 +32,7 @@ function _user_check() {
     case 'register':
       $form_state = unserialize($_POST['form_state']);
       $form = unserialize($_POST['form']);
-      user_register_submit($form, $form_state);
+      //user_register_submit($form, $form_state);
       dpm($form_state);
       dpm($_POST);
       break;
