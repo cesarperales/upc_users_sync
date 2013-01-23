@@ -32,9 +32,9 @@ function _user_check() {
     case 'register':
       $form_state = unserialize($_POST['form_state']);
       $form = unserialize($_POST['form']);
-      //user_register_submit($form, $form_state);
       dpm($form_state);
       dpm($_POST);
+      user_register_submit($form, $form_state);
       break;
     case 'login':
 
@@ -63,10 +63,12 @@ function _user_register_submit($form, &$form_state) {
     'name' => $data['name'],
     'mail' => $data['mail'],
   );
-  // Create cookie and redirect to master.             
+  // Create cookie and redirect to master. 
   bakery_bake_oatmeal_cookie($data['name'], $data);
   //
-  _user_spread($form, $form_state_copy, 'register');
+  unset($form_state_copy['values']['field_user_address_ubigeo']);
+  _user_spread($form, form_state_values_clean($form_state_copy), 'register');
+  dpm($form_state_copy);
   //drupal_goto(variable_get('bakery_master', 'http://drupal.org/') . 'bakery');
 }
 /**
