@@ -37,7 +37,7 @@ function _user_check() {
  * This is a copy of _bakery_register_submit without the redirection.
  */
 function _user_register_submit($form, &$form_state) {
-  $user_info = $form_state['values'];
+  $form_state_copy = $form_state;
 // Create an array of fields to send to the master. We need these four fields.
   $allowed = array('name', 'mail', 'pass', 'timezone');
   foreach ($form_state['values'] as $key => $value) {
@@ -57,7 +57,7 @@ function _user_register_submit($form, &$form_state) {
   // Create cookie and redirect to master.             
   bakery_bake_oatmeal_cookie($data['name'], $data);
   //
-  _user_spread($user_info);
+  _user_spread($form, $form_state_copy);
   //drupal_goto(variable_get('bakery_master', 'http://drupal.org/') . 'bakery');
 }
 /**
@@ -75,7 +75,7 @@ function upc_users_sync_form_alter(&$form, $form_state, $form_id) {
   if($form_id == 'user_register_form') {
     $form['#submit'] = array();
     //overrides default and bakery submit functions
-    $form['#submit'][] = 'user_register_submit'; //graba en local
+    $form['#submit'][] = 'user_register_submit'; //default, graba en local
     $form['#submit'][] = '_user_register_submit'; //graba en master
   }
 }
@@ -105,9 +105,8 @@ function _user_create($uid = null){
  * If this is master, spread to slaves.
  * If this is slave spread to master.
  */
-function _user_spread($user) {
-  if(!empty($user)) {
-    $user_object = serialize($user);
+function _user_spread($form, $form_state) {
+  if(!empty($form_state)) {
     if(_is_master()) {
       //spread to slaves
       $slaves = _get_slaves();
@@ -115,18 +114,19 @@ function _user_spread($user) {
       $current_site = 'http://'.$_SERVER['SERVER_NAME'];
       foreach ($slaves as $url) {
         if($url != $current_site) {
-          _user_spread_to($user_object, $url);
+          _user_spread_to($form, $form_state, $url);
         }
       }
     } else {
       //spread to master
       $url = _get_master();
-      _user_spread_to($user_object, $url);
+      _user_spread_to($form, $form_state, $url);
     }
   }
 }
-function _user_spread_to($user_object, $url) {
+function _user_spread_to($form, $form_state, $url) {
   //cURL version
+  $user_object = serialize($form_state);
   $curl = curl_init();
   curl_setopt_array($curl, array(
     CURLOPT_RETURNTRANSFER => 1,
@@ -134,7 +134,8 @@ function _user_spread_to($user_object, $url) {
     CURLOPT_POST => 1,
     CURLOPT_POSTFIELDS => array(
         'user_object' => $user_object,
-        'test' => 'value',
+        'form' => $form,
+        'url' => $url,
     )
   ));
   $resp = curl_exec($curl);
