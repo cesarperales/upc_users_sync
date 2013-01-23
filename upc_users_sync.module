@@ -112,7 +112,7 @@ function _user_spread($user) {
     if(_is_master()) {
       //spread to slaves
       $slaves = _get_slaves();
-      //spreading to self site
+      //not spreading to this site
       $current_site = 'http://'.$_SERVER['SERVER_NAME'];
       foreach ($slaves as $url) {
         if($url != $current_site) {
@@ -130,7 +130,7 @@ function _user_spread_to($user_object, $url) {
   $options = array(
       'headers' => array('Content-Type' => 'application/x-www-form-urlencoded; charset=utf-8'),
       'method' => 'POST',
-      'data' => $user_object,
+      'data' => http_build_query($user_object),
       );
   $result = drupal_http_request($url .'users_sync/check', $options);
   dpm($result);
