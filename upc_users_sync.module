@@ -45,8 +45,8 @@ function _user_check() {
 /**
  * This is a copy of _bakery_register_submit without the redirection.
  */
-function _user_register_subm{
-  $form_state_copy = form_state_values_clean($form_state);
+function _user_register_submit($form, &$form_state) {
+  $form_state_copy = $form_state;
 // Create an array of fields to send to the master. We need these four fields.
   $allowed = array('name', 'mail', 'pass', 'timezone');
   foreach ($form_state['values'] as $key => $value) {
