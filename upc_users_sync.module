@@ -22,18 +22,31 @@ function upc_users_sync_menu() {
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
+  $items['users_sync/user_test'] = array(
+    'title' => 'Test Users',
+    'page callback' => '_user_test',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
   return $items;
 }
+function _user_test() {
+  global $user;
+  $users = user_load($user->uid);
+  dpm($users);
+return 'hola';
+}
 /**
- * Activate this on hook_login
+ * url called
  */
 function _user_check() {
   switch($_POST['op']) {
     case 'register':
       $form_state = unserialize($_POST['form_state']);
       $form = unserialize($_POST['form']);
-      dpm($form_state);
-      dpm($_POST);
+      #dpm($form_state);
+      #dpm($_POST);
       user_register_submit($form, $form_state);
       break;
     case 'login':
@@ -65,10 +78,7 @@ function _user_register_submit($form, &$form_state) {
   );
   // Create cookie and redirect to master. 
   bakery_bake_oatmeal_cookie($data['name'], $data);
-  //
-  unset($form_state_copy['values']['field_user_address_ubigeo']);
   _user_spread($form, $form_state_copy, 'register');
-  dpm($form_state_copy);
   //drupal_goto(variable_get('bakery_master', 'http://drupal.org/') . 'bakery');
 }
 /**
@@ -90,26 +100,7 @@ function upc_users_sync_form_alter(&$form, $form_state, $form_id) {
     $form['#submit'][] = '_user_register_submit'; //graba en master
   }
 }
-/**
- * Create or update User
- */
-function _user_create($uid = null){
-  if(!empty($uid)) {
-    //update user
-    $remote_user = _get_remote_user();
-    $user = user_load($uid);
-    //map information here
 
-    #user_save($user);
-    return $user->uid;
-  } else {
-    //create user
-    $remote_user = _get_remote_user();
-
-    #user_save($user);
-    return $user->uid;
-  }
-}
 /**
  * Spread users to
  * Decide which sites are we spreading users to
@@ -173,6 +164,26 @@ function _get_local_user(){
       return $user->uid;
     }
     return false;
+  }
+}
+/**
+ * Create or update User
+ */
+function _user_create($uid = null){
+  if(!empty($uid)) {
+    //update user
+    $remote_user = _get_remote_user();
+    $user = user_load($uid);
+    //map information here
+
+    #user_save($user);
+    return $user->uid;
+  } else {
+    //create user
+    $remote_user = _get_remote_user();
+
+    #user_save($user);
+    return $user->uid;
   }
 }
 /**
