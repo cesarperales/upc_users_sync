@@ -4,12 +4,21 @@
  */
 function upc_users_sync_menu() {
   $items = array();
-  $items['users_sync/check'] = array(
-    'title' => 'Check',
-    'page callback' => '_user_check',
-    'access callback' => TRUE,
-    'type' => MENU_CALLBACK,
-  );
+  if(_is_master()){ 
+    $items['users_sync/bakery'] = array(
+      'title' => 'Check',
+      'page callback' => 'upc_users_sync_bakery_register',
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK,
+    );
+  } else {
+   $items['users_sync/bakery'] = array(
+      'title' => 'Check',
+      'page callback' => 'upc_users_sync_bakery_register_return',
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK,
+    );
+  }
   $items['users_sync/user_create'] = array(
     'title' => 'Crear cuenta',
     'page callback' => '_user_create',
@@ -30,30 +39,6 @@ function upc_users_sync_menu() {
   );
 
   return $items;
-}
-function _user_test() {
-  global $user;
-  $new = _map_user();
-  dpm($new);
-  return 'hola';
-}
-/**
- * url called
- */
-function _user_check() {
-  switch($_POST['op']) {
-    case 'register':
-      $form_state = unserialize($_POST['form_state']);
-      $form = unserialize($_POST['form']);
-      #dpm($form_state);
-      #dpm($_POST);
-      user_register_submit($form, $form_state);
-      break;
-    case 'login':
-
-      break;
-  }
-  return 'check';
 }
 
 /**
@@ -114,11 +99,96 @@ function upc_users_sync_bakery_register_return() {
   drupal_access_denied();
 }
 /**
+ * Special Bakery register callback registers the user and returns to slave.
+ */
+function upc_users_sync_bakery_register() {                                            
+  $cookie = _bakery_validate_cookie('OATMEAL');                         
+    
+  if ($cookie) {
+    // Valid cookie.                                                    
+    if (variable_get('user_register', 1)) {
+      // Users are allowed to register.                                 
+      
+      // Validate and save any errors into an array of arguments to send back. 
+      $get_arguments = array();
+      $name = trim($cookie['data']['name']);                            
+      $mail = trim($cookie['data']['mail']);
+      
+      // Check if user exists with same email.                          
+      $account = user_load_by_mail($mail);                              
+      if ($account) {                                                   
+        $get_arguments['mail'] = 1;                                     
+      } 
+      else {
+        // Check username.                                              
+        $account = user_load_by_name($name);                            
+        if ($account) {                                                 
+          $get_arguments['name'] = 1;                                   
+        }                                                               
+      }
+    } 
+    else {
+      watchdog('bakery', 'Master Bakery site user registration is disabled but users are trying to register from a subsite.', array(), WATCHDOG_ERROR);
+      $get_arguments['register'] = 1;                                   
+    }                                                                   
+                                                                        
+    // Any $get_arguments set so far would mean there was an error.     
+    if (empty($get_arguments)) {                                        
+      // Create user.                                                   
+      $userinfo = $cookie['data'];
+
+      if (!$cookie['data']['pass']) {
+        $pass = user_password();
+      }
+      else {
+        $pass = $cookie['data']['pass'];
+      }
+      // Set additional properties.
+      $userinfo['name'] = $name;
+      $userinfo['mail'] = $mail;
+      $userinfo['pass'] = $pass;
+      $userinfo['init'] = $mail;
+      $userinfo['status'] = 1;
+      $userinfo['authname_bakery'] = $name;
+      $account = user_save('', $userinfo);
+      watchdog('user', 'New external user: %name using module bakery from slave !slave.', array('%name' => $account->name, '!slave' => $cookie['slave']), WATCHDOG_NOTICE, l(t('edit'), 'user/'. $account->uid .'/edit'));
+
+      // Redirect to slave.
+      if (!variable_get('user_email_verification', TRUE)) {
+        // Create identification cookie and log user in.
+        _bakery_bake_chocolatechip_cookie($account->name, $account->mail, url("user/$account->uid/edit", array('absolute' => TRUE)));
+        bakery_user_external_login($account);
+
+        $get_arguments['success'] = 1;
+      }
+      else {
+        $get_arguments['validate'] = 1;
+        $url = $cookie['slave'] . '/' . $cookie['destination'];
+      }
+    }
+    else {
+      // There were errors.
+      session_destroy();
+    }
+
+    // Destroy the redirect cookie.
+    _bakery_eat_cookie('OATMEAL');
+    // Include a hashed value so the slave can validate the request.
+    $key = variable_get('bakery_key', '');
+    $get_arguments['hash'] = hash_hmac('sha256', $cookie['slave'], $key);
+    $url = $cookie['slave'] . '/' . $cookie['destination'];
+    // Redirect back to custom Bakery callback on slave.
+    drupal_goto($url, array('query' => drupal_http_build_query($get_arguments)));
+  }
+  // Invalid request.
+  drupal_access_denied();
+}
+/**
  * This is a copy of _bakery_register_submit without the redirection.
  */
 function _user_register_submit($form, &$form_state) {
-  $form_state_copy = $form_state;
-// Create an array of fields to send to the master. We need these four fields.
+  //$form_state_copy = $form_state;
+  // Create an array of fields to send to the master. We need these four fields.
   $allowed = array('name', 'mail', 'pass', 'timezone');
   foreach ($form_state['values'] as $key => $value) {
     if (!in_array($key, $allowed)) {
@@ -136,15 +206,8 @@ function _user_register_submit($form, &$form_state) {
   );
   // Create cookie and redirect to master. 
   bakery_bake_oatmeal_cookie($data['name'], $data);
-  _user_spread($form, $form_state_copy, 'register');
-  //drupal_goto(variable_get('bakery_master', 'http://drupal.org/') . 'bakery');
-}
-/**
- * Implementation of hook_user_login
- */
-function upc_users_sync_user_login(&$edit, $account) {
-  #dpm($edit);
-  #dpm($account);
+  //_user_spread($form, $form_state_copy, 'register');
+  drupal_goto(variable_get('bakery_master', 'http://drupal.org/') . 'users_sync/bakery');
 }
 /**
  * Implementation of hook_form_alter
@@ -162,79 +225,16 @@ function upc_users_sync_form_alter(&$form, $form_state, $form_id) {
 }
 
 /**
- * Spread users to
- * Decide which sites are we spreading users to
- * If this is master, spread to slaves.
- * If this is slave spread to master.
- */
-function _user_spread($form, $form_state, $op) {
-  if(!empty($form_state)) {
-    if(_is_master()) {
-      //spread to slaves
-      $slaves = _get_slaves();
-      //not spreading to this site
-      $current_site = 'http://'.$_SERVER['SERVER_NAME'];
-      foreach ($slaves as $url) {
-        if($url != $current_site) {
-          _user_spread_to($form, $form_state, $op, $url);
-        }
-      }
-    } else {
-      //spread to master
-      $url = _get_master();
-      _user_spread_to($form, $form_state, $op, $url);
-    }
-  }
-}
-function _user_spread_to($form, $form_state, $op, $url) {
-  //cURL version
-  $curl = curl_init();
-  curl_setopt_array($curl, array(
-    CURLOPT_RETURNTRANSFER => 1,
-    CURLOPT_URL => $url . 'users_sync/check',
-    CURLOPT_POST => 1,
-    CURLOPT_POSTFIELDS => array(
-        'url' => 'http://' . $_SERVER['SERVER_NAME'] ,
-        'form' => serialize($form),
-        'form_state' => serialize($form_state),
-        'op' => $op, 
-    )
-  ));
-  $resp = curl_exec($curl);
-  if (!$resp) {
-    drupal_set_message(t('Error %error for site at %url', array('%error' => curl_error($curl) .' '. curl_errno($curl), '%url' => $url)));
-  } else {
-    drupal_set_message($resp);
-  }
-}
-/**
- * Get local User
- * Load local user by email or username
- * @return string uid
- */
-function _get_local_user(){
-  //check by mail
-  if(!empty($_POST['email'])) { 
-    $user = user_load_by_email($_POST['email']);
-    //check by username
-    if(empty($user) && !empty($_POST['name'])) {
-      $user = user_load_by_name($_POST['name']);
-    }
-    if(!empty($user)) {
-      return $user->uid;
-    }
-    return false;
-  }
-}
-/**
  * Create User Array
- * Collect information from cookies and post and create a user array
- * to be use in user_save
+ * Collect information from cookies and post and create an user array
+ * to be use in user_save function
  * @return array $user
  */
 function _map_user() {
-  global $user;
-  $post = user_load($user->uid);
+  $post = unserialize($_POST['form']);
+  //TEST:
+  /*global $user;
+  $post = user_load($user->uid);*/
   $fields = array(
     'field_permission_marketing',
     'field_permission_marketing_epe',
@@ -285,7 +285,9 @@ function _map_user() {
 
   foreach ($post as $label => $value) {
     if(in_array($label, $fields)) {
-      $new[$label] = $post->$label;
+      if(!empty($post->$label)) {
+        $new[$label] = $post->$label;
+      }
     }
   }
   return $new;
