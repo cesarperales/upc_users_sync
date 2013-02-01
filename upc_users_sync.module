@@ -33,9 +33,9 @@ function upc_users_sync_menu() {
 }
 function _user_test() {
   global $user;
-  $users = user_load($user->uid);
-  dpm($users);
-return 'hola';
+  $new = _map_user();
+  dpm($new);
+  return 'hola';
 }
 /**
  * url called
@@ -64,7 +64,7 @@ function _user_check() {
  *
  * Redirects to the homepage on success or to the register page if there was a problem.  
  */
-function bakery_register_return() {
+function upc_users_sync_bakery_register_return() {
   $cookie = bakery_taste_oatmeal_cookie();
 
   if ($cookie) {
@@ -85,17 +85,11 @@ function bakery_register_return() {
       if (!empty($errors['validate'])) {
         // If the user must validate their email then we need to create an
         // account for them on the slave site.
-        $new = array(
-            'name' => $cookie['name'],
-            'mail' => $cookie['data']['mail'],
-            'init' => _bakery_init_field($cookie['data']['uid']),
-            'status' => 1,
-            'pass' => user_password(),
-            //THIS IS ADDED FOR UPC
-             'field_permission_marketing' => array('und' => array(0 => array('value' => 1 ))),
-             //END OF ADDED PART FOR UPC
 
-          );
+        //THIS IS ADDED FOR UPC
+        $new = _map_user();
+        //END OF ADDED PART FOR UPC
+
         $account = user_save(new stdClass(), $new);
         // Notify the user that they need to validate their email.
         _user_mail_notify('register_no_approval_required', $account);
@@ -157,11 +151,13 @@ function upc_users_sync_user_login(&$edit, $account) {
  * Triggers _user_check function when submitting the register form
  */
 function upc_users_sync_form_alter(&$form, $form_state, $form_id) {
-  if($form_id == 'user_register_form') {
+  if ($form_id == 'user_register_form') {
     $form['#submit'] = array();
     //overrides default and bakery submit functions
-    $form['#submit'][] = 'user_register_submit'; //default, graba en local
-    $form['#submit'][] = '_user_register_submit'; //graba en master
+    //default, graba en local
+    $form['#submit'][] = 'user_register_submit';  
+    //graba en master
+    $form['#submit'][] = '_user_register_submit'; 
   }
 }
 
@@ -229,6 +225,70 @@ function _get_local_user(){
     }
     return false;
   }
+}
+/**
+ * Create User Array
+ * Collect information from cookies and post and create a user array
+ * to be use in user_save
+ * @return array $user
+ */
+function _map_user() {
+  global $user;
+  $post = user_load($user->uid);
+  $fields = array(
+    'field_permission_marketing',
+    'field_permission_marketing_epe',
+    'field_permission_marketing_pos',
+    'field_permission_marketing_pre',
+    'field_reusable_observation',
+    'field_user_address',
+    'field_user_address_city',
+    'field_user_address_ubigeo',
+    'field_user_address_urba',
+    'field_user_address_via',
+    'field_user_birthday',
+    'field_user_business_code',
+    'field_user_business_doc_type',
+    'field_user_business_document',
+    'field_user_business_hq_address',
+    'field_user_business_hq_city',
+    'field_user_business_hq_code',
+    'field_user_business_hq_name',
+    'field_user_business_hq_phone',
+    'field_user_business_hq_ubigeo',
+    'field_user_business_hq_urba',
+    'field_user_business_hq_via',
+    'field_user_business_mail',
+    'field_user_business_name',
+    'field_user_charge',
+    'field_user_courtesy_title_term',
+    'field_user_firstname',
+    'field_user_grade_term',
+    'field_user_interest_area_term',
+    'field_user_lastname',
+    'field_user_level_charge',
+    'field_user_mobile_phone',
+    'field_user_mother_lastname',
+    'field_user_nationality',
+    'field_user_nick',
+    'field_user_phone',
+    'field_user_sex',
+    'field_user_socrates_code',
+  );
+  $new = array(
+    'name' => $cookie['name'],
+    'mail' => $cookie['data']['mail'],
+    'init' => _bakery_init_field($cookie['data']['uid']),
+    'status' => 1,
+    'pass' => user_password(),
+  );
+
+  foreach ($post as $label => $value) {
+    if(in_array($label, $fields)) {
+      $new[$label] = $post->$label;
+    }
+  }
+  return $new;
 }
 /**
  * Create or update User
