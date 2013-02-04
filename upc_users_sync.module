@@ -40,72 +40,18 @@ function upc_users_sync_menu() {
 
   return $items;
 }
-
 /**
  * THIS IS A COPY OF BAKERY_REGISTER_RETURN() FUNCTION
  * ADDED PARTS ARE BEEN INDICATING
- * 
- * Custom return for slave registration process.
+ * This function is called only in master
  *
- * Redirects to the homepage on success or to the register page if there was a problem.  
- */
-function upc_users_sync_bakery_register_return() {
-  $cookie = bakery_taste_oatmeal_cookie();
-
-  if ($cookie) {
-    // Valid cookie, now destroy it.
-    _bakery_eat_cookie('OATMEAL');
-
-    $errors = $cookie['data']['errors'];
-    if (empty($errors)) {
-      drupal_set_message(t('Registration successful. You are now logged in.'));
-      // Redirect to front page.
-      drupal_goto('<front>');
-    }
-    else {
-      if (!empty($errors['register'])) {
-        drupal_set_message(t('Registration is not enabled on @master. Please contact a site administrator.', array('@master' => variable_get('bakery_master', 'http://drupal.org/'))), 'error');
-        watchdog('bakery', 'Master Bakery site user registration is disabled', array(), WATCHDOG_ERROR);
-      }
-      if (!empty($errors['validate'])) {
-        // If the user must validate their email then we need to create an
-        // account for them on the slave site.
-
-        //THIS IS ADDED FOR UPC
-        $new = _map_user();
-        //END OF ADDED PART FOR UPC
-
-        $account = user_save(new stdClass(), $new);
-        // Notify the user that they need to validate their email.
-        _user_mail_notify('register_no_approval_required', $account);
-        unset($_SESSION['bakery']['register']);
-        drupal_set_message(t('A welcome message with further instructions has been sent to your e-mail address.'));
-      }
-      if (!empty($errors['name'])) {
-        drupal_set_message(t('Name is already taken.'), 'error');
-      }
-      if (!empty($errors['mail'])) {
-        drupal_set_message(t('E-mail address is already registered.'), 'error');
-      }
-      if (!empty($errors['mail_denied'])) {
-        drupal_set_message(t('The e-mail address has been denied access..'), 'error');
-      }
-      if (!empty($errors['name_denied'])) {
-        drupal_set_message(t('The name has been denied access..'), 'error');
-      }
-      drupal_goto('user/register');
-    }
-  }
-  drupal_access_denied();
-}
-/**
  * Special Bakery register callback registers the user and returns to slave.
  */
-function upc_users_sync_bakery_register() {                                            
+function upc_users_sync_bakery_register() { 
   $cookie = _bakery_validate_cookie('OATMEAL');                         
     
   if ($cookie) {
-    // Valid cookie.                                                    
+    // Valid cookie.                            
     if (variable_get('user_register', 1)) {
       // Users are allowed to register.                                 
       
@@ -150,7 +96,8 @@ function upc_users_sync_bakery_register() {
       $userinfo['init'] = $mail;
       $userinfo['status'] = 1;
       $userinfo['authname_bakery'] = $name;
-      $account = user_save('', $userinfo);
+      $user = _map_user($userinfo);
+      $account = user_save('', $user);
       watchdog('user', 'New external user: %name using module bakery from slave !slave.', array('%name' => $account->name, '!slave' => $cookie['slave']), WATCHDOG_NOTICE, l(t('edit'), 'user/'. $account->uid .'/edit'));
 
       // Redirect to slave.
@@ -183,6 +130,73 @@ function upc_users_sync_bakery_register() {
   // Invalid request.
   drupal_access_denied();
 }
+/**
+ * THIS IS A COPY OF BAKERY_REGISTER_RETURN() FUNCTION
+ * ADDED PARTS ARE BEEN INDICATING
+ * This function is called only in slave
+ * 
+ * Custom return for slave registration process.
+ *
+ * Redirects to the homepage on success or to the register page if there was a problem.  
+ */
+function upc_users_sync_bakery_register_return() {
+  $cookie = bakery_taste_oatmeal_cookie();
+
+  if ($cookie) {
+    // Valid cookie, now destroy it.
+    _bakery_eat_cookie('OATMEAL');
+
+    $errors = $cookie['data']['errors'];
+    if (empty($errors)) {
+      drupal_set_message(t('Registration successful. You are now logged in.'));
+      // Redirect to front page.
+      drupal_goto('<front>');
+    }
+    else {
+      if (!empty($errors['register'])) {
+        drupal_set_message(t('Registration is not enabled on @master. Please contact a site administrator.', array('@master' => variable_get('bakery_master', 'http://drupal.org/'))), 'error');
+        watchdog('bakery', 'Master Bakery site user registration is disabled', array(), WATCHDOG_ERROR);
+      }
+      if (!empty($errors['validate'])) {
+        // If the user must validate their email then we need to create an
+        // account for them on the slave site.
+
+        $new = array(
+            'name' => $cookie['name'],
+            'mail' => $cookie['data']['mail'],
+            'init' => _bakery_init_field($cookie['data']['uid']),
+            'status' => 1,
+            'pass' => user_password(),
+          );
+
+        //THIS IS ADDED FOR UPC
+        $user = _map_user($new);
+        //END OF ADDED PART FOR UPC
+
+        $account = user_save(new stdClass(), $user);
+        // Notify the user that they need to validate their email.
+        _user_mail_notify('register_no_approval_required', $account);
+        unset($_SESSION['bakery']['register']);
+        drupal_set_message(t('A welcome message with further instructions has been sent to your e-mail address.'));
+      }
+      if (!empty($errors['name'])) {
+        drupal_set_message(t('Name is already taken.'), 'error');
+      }
+      if (!empty($errors['mail'])) {
+        drupal_set_message(t('E-mail address is already registered.'), 'error');
+      }
+      if (!empty($errors['mail_denied'])) {
+        drupal_set_message(t('The e-mail address has been denied access..'), 'error');
+      }
+      if (!empty($errors['name_denied'])) {
+        drupal_set_message(t('The name has been denied access..'), 'error');
+      }
+      drupal_goto('user/register');
+    }
+  }
+  drupal_access_denied();
+}
+
 /**
  * This is a copy of _bakery_register_submit without the redirection.
  */
@@ -230,7 +244,7 @@ function upc_users_sync_form_alter(&$form, $form_state, $form_id) {
  * to be use in user_save function
  * @return array $user
  */
-function _map_user() {
+function _map_user($userinfo) {
   $post = unserialize($_POST['form']);
   //TEST:
   /*global $user;
@@ -275,22 +289,26 @@ function _map_user() {
     'field_user_sex',
     'field_user_socrates_code',
   );
-  $new = array(
-    'name' => $cookie['name'],
-    'mail' => $cookie['data']['mail'],
-    'init' => _bakery_init_field($cookie['data']['uid']),
+  $user = array(
+    'name' => $userinfo['name'],
+    'mail' => $userinfo['mail'],
+    'init' => $userinfo['init'],
     'status' => 1,
     'pass' => user_password(),
   );
 
+  if(!empty($userinfo['authname_bakery'])) {
+    $user['authname_bakery'] = $userinfo['authname_bakery'];
+  }
+  
   foreach ($post as $label => $value) {
     if(in_array($label, $fields)) {
       if(!empty($post->$label)) {
-        $new[$label] = $post->$label;
+        $user[$label] = $post->$label;
       }
     }
   }
-  return $new;
+  return $user;
 }
 /**
  * Create or update User
