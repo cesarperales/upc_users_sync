@@ -8,7 +8,7 @@ function upc_users_sync_menu() {
     $items['users_sync/bakery'] = array(
       'title' => 'Check',
       'page callback' => 'upc_users_sync_bakery_register',
-      'access callback' => TRUE,
+      'access callback' => 'user_is_anonymous',
       'type' => MENU_CALLBACK,
     );
   } else {
