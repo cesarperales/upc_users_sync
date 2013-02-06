@@ -130,7 +130,8 @@ function upc_users_sync_bakery_register() {
     // Bake a new cookie for validation on the slave.
     bakery_bake_oatmeal_cookie($name, $data);
     error_log($cookie['slave']);
-    drupal_goto($cookie['slave'] . 'users_sync/bakery');
+    //drupal_goto($cookie['slave'] . 'users_sync/bakery');
+    _goto_curl($user, $cookie['slave'] . 'users_sync/bakery');
   }
   // Invalid request.
   drupal_access_denied();
@@ -227,7 +228,8 @@ function _user_register_submit($form, &$form_state) {
   // Create cookie and redirect to master. 
   bakery_bake_oatmeal_cookie($data['name'], $data);
   //_user_spread($form, $form_state_copy, 'register');
-  drupal_goto(variable_get('bakery_master', 'http://drupal.org/') . 'users_sync/bakery');
+  //drupal_goto(variable_get('bakery_master', 'http://drupal.org/') . 'users_sync/bakery');
+  _goto_curl($form, variable_get('bakery_master', 'http://drupal.org/') . 'users_sync/bakery');
 }
 /**
  * Implementation of hook_form_alter
@@ -244,6 +246,27 @@ function upc_users_sync_form_alter(&$form, $form_state, $form_id) {
   }
 }
 
+function _goto_curl($form,  $url) {
+  //cURL version
+  $curl = curl_init();
+  curl_setopt_array($curl, array(
+    //CURLOPT_RETURNTRANSFER => 1,
+    CURLOPT_URL => $url,
+    CURLOPT_POST => 1,
+    CURLOPT_POSTFIELDS => array(
+        'url' => 'http://' . $_SERVER['SERVER_NAME'] ,
+        'form' => serialize($form),
+        'form_state' => serialize($form_state),
+    )
+  ));
+  curl_exec($curl);
+  //$resp = curl_exec($curl);
+  /*if (!$resp) {
+    drupal_set_message(t('Error %error for site at %url', array('%error' => curl_error($curl) .' '. curl_errno($curl), '%url' => $url)));
+  } else {
+    drupal_set_message($resp);
+  }*/
+}
 /**
  * Create User Array
  * Collect information from cookies and post and create an user array
@@ -307,6 +330,8 @@ function _map_user($userinfo) {
     $user['authname_bakery'] = $userinfo['authname_bakery'];
   }
   
+  dpm($post);
+  error_log(print_r($post,1));
   foreach ($post as $label => $value) {
     if(in_array($label, $fields)) {
       if(!empty($post->$label)) {
