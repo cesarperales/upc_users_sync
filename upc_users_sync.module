@@ -7,15 +7,15 @@ function upc_users_sync_menu() {
   if(_is_master()){ 
     $items['users_sync/bakery'] = array(
       'title' => 'Check',
-      'page callback' => 'upc_users_sync_bakery_register',
       'access callback' => 'user_is_anonymous',
+      'page callback' => 'upc_users_sync_bakery_register',
       'type' => MENU_CALLBACK,
     );
   } else {
    $items['users_sync/bakery'] = array(
       'title' => 'Check',
-      'page callback' => 'upc_users_sync_bakery_register_return',
       'access callback' => TRUE,
+      'page callback' => 'upc_users_sync_bakery_register_return',
       'type' => MENU_CALLBACK,
     );
   }
@@ -48,39 +48,42 @@ function upc_users_sync_menu() {
  * Special Bakery register callback registers the user and returns to slave.
  */
 function upc_users_sync_bakery_register() { 
-  $cookie = _bakery_validate_cookie('OATMEAL');                         
-    
+  $cookie = bakery_taste_oatmeal_cookie();
+
   if ($cookie) {
-    // Valid cookie.                            
+    error_log('we are beeznest!');
+    // Valid cookie.
+    // Destroy the current oatmeal cookie, we'll set a new one when we return to the slave.
+    _bakery_eat_cookie('OATMEAL');
+
     if (variable_get('user_register', 1)) {
-      // Users are allowed to register.                                 
-      
-      // Validate and save any errors into an array of arguments to send back. 
-      $get_arguments = array();
-      $name = trim($cookie['data']['name']);                            
+      // Users are allowed to register.
+      $data = array();
+      // Save errors.
+      $errors = array();
+      $name = trim($cookie['data']['name']);
       $mail = trim($cookie['data']['mail']);
-      
-      // Check if user exists with same email.                          
-      $account = user_load_by_mail($mail);                              
-      if ($account) {                                                   
-        $get_arguments['mail'] = 1;                                     
-      } 
-      else {
-        // Check username.                                              
-        $account = user_load_by_name($name);                            
-        if ($account) {                                                 
-          $get_arguments['name'] = 1;                                   
-        }                                                               
+
+      // Check if user exists with same email.
+      $account = user_load_by_mail($mail);
+      if ($account) {
+        $errors['mail'] = 1;
       }
-    } 
+      else {
+        // Check username.
+        $account = user_load_by_name($name);
+        if ($account) {
+          $errors['name'] = 1;
+        }
+      }
+    }
     else {
       watchdog('bakery', 'Master Bakery site user registration is disabled but users are trying to register from a subsite.', array(), WATCHDOG_ERROR);
-      $get_arguments['register'] = 1;                                   
-    }                                                                   
-                                                                        
-    // Any $get_arguments set so far would mean there was an error.     
-    if (empty($get_arguments)) {                                        
-      // Create user.                                                   
+      $errors['register'] = 1;
+    }
+
+    if (empty($errors)) {
+      // Create user.
       $userinfo = $cookie['data'];
 
       if (!$cookie['data']['pass']) {
@@ -89,6 +92,7 @@ function upc_users_sync_bakery_register() {
       else {
         $pass = $cookie['data']['pass'];
       }
+
       // Set additional properties.
       $userinfo['name'] = $name;
       $userinfo['mail'] = $mail;
@@ -98,6 +102,9 @@ function upc_users_sync_bakery_register() {
       $userinfo['authname_bakery'] = $name;
       $user = _map_user($userinfo);
       $account = user_save('', $user);
+      // Set some info to return to the slave.
+      $data['uid'] = $account->uid;
+      $data['mail'] = $mail;
       watchdog('user', 'New external user: %name using module bakery from slave !slave.', array('%name' => $account->name, '!slave' => $cookie['slave']), WATCHDOG_NOTICE, l(t('edit'), 'user/'. $account->uid .'/edit'));
 
       // Redirect to slave.
@@ -105,12 +112,11 @@ function upc_users_sync_bakery_register() {
         // Create identification cookie and log user in.
         _bakery_bake_chocolatechip_cookie($account->name, $account->mail, url("user/$account->uid/edit", array('absolute' => TRUE)));
         bakery_user_external_login($account);
-
-        $get_arguments['success'] = 1;
       }
       else {
-        $get_arguments['validate'] = 1;
-        $url = $cookie['slave'] . '/' . $cookie['destination'];
+        // The user needs to validate their email, redirect back to slave to
+        // inform them.
+        $errors['validate'] = 1;
       }
     }
     else {
@@ -118,17 +124,18 @@ function upc_users_sync_bakery_register() {
       session_destroy();
     }
 
-    // Destroy the redirect cookie.
-    _bakery_eat_cookie('OATMEAL');
-    // Include a hashed value so the slave can validate the request.
-    $key = variable_get('bakery_key', '');
-    $get_arguments['hash'] = hash_hmac('sha256', $cookie['slave'], $key);
-    $url = $cookie['slave'] . '/' . $cookie['destination'];
     // Redirect back to custom Bakery callback on slave.
-    drupal_goto($url, array('query' => drupal_http_build_query($get_arguments)));
+    $data['errors'] = $errors;
+    $data['name'] = $name;
+    // Bake a new cookie for validation on the slave.
+    bakery_bake_oatmeal_cookie($name, $data);
+    error_log($cookie['slave']);
+    drupal_goto($cookie['slave'] . 'users_sync/bakery');
   }
   // Invalid request.
   drupal_access_denied();
+
+
 }
 /**
  * THIS IS A COPY OF BAKERY_REGISTER_RETURN() FUNCTION
@@ -139,8 +146,9 @@ function upc_users_sync_bakery_register() {
  *
  * Redirects to the homepage on success or to the register page if there was a problem.  
  */
-function upc_users_sync_bakery_register_return() {
-  $cookie = bakery_taste_oatmeal_cookie();
+function upc_users_sync_bamery_register_return() {
+
+ $cookie = bakery_taste_oatmeal_cookie();
 
   if ($cookie) {
     // Valid cookie, now destroy it.
@@ -160,7 +168,6 @@ function upc_users_sync_bakery_register_return() {
       if (!empty($errors['validate'])) {
         // If the user must validate their email then we need to create an
         // account for them on the slave site.
-
         $new = array(
             'name' => $cookie['name'],
             'mail' => $cookie['data']['mail'],
@@ -173,8 +180,6 @@ function upc_users_sync_bakery_register_return() {
         $user = _map_user($new);
         //END OF ADDED PART FOR UPC
 
-        $account = user_save(new stdClass(), $user);
-        // Notify the user that they need to validate their email.
         _user_mail_notify('register_no_approval_required', $account);
         unset($_SESSION['bakery']['register']);
         drupal_set_message(t('A welcome message with further instructions has been sent to your e-mail address.'));
@@ -195,6 +200,7 @@ function upc_users_sync_bakery_register_return() {
     }
   }
   drupal_access_denied();
+
 }
 
 /**
@@ -232,7 +238,7 @@ function upc_users_sync_form_alter(&$form, $form_state, $form_id) {
     $form['#submit'] = array();
     //overrides default and bakery submit functions
     //default, graba en local
-    $form['#submit'][] = 'user_register_submit';  
+    //$form['#submit'][] = 'user_register_submit';  
     //graba en master
     $form['#submit'][] = '_user_register_submit'; 
   }
