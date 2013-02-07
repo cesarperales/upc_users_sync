@@ -51,7 +51,6 @@ function upc_users_sync_bakery_register() {
   $cookie = bakery_taste_oatmeal_cookie();
 
   if ($cookie) {
-    error_log('we are beeznest!');
     // Valid cookie.
     // Destroy the current oatmeal cookie, we'll set a new one when we return to the slave.
     _bakery_eat_cookie('OATMEAL');
@@ -100,7 +99,8 @@ function upc_users_sync_bakery_register() {
       $userinfo['init'] = $mail;
       $userinfo['status'] = 1;
       $userinfo['authname_bakery'] = $name;
-      $user = _map_user($userinfo);
+      $user = _map_user($userinfo, $cookie['data']);
+
       $account = user_save('', $user);
       // Set some info to return to the slave.
       $data['uid'] = $account->uid;
@@ -129,9 +129,10 @@ function upc_users_sync_bakery_register() {
     $data['name'] = $name;
     // Bake a new cookie for validation on the slave.
     bakery_bake_oatmeal_cookie($name, $data);
-    error_log($cookie['slave']);
-    //drupal_goto($cookie['slave'] . 'users_sync/bakery');
-    _goto_curl($user, $cookie['slave'] . 'users_sync/bakery');
+    //upc information
+    //bakery_bake_oatmeal_cookie('upcinfo', $form);
+    drupal_goto($cookie['slave'] . 'users_sync/bakery');
+    //_goto_curl($user, $cookie['slave'] . 'users_sync/bakery');
   }
   // Invalid request.
   drupal_access_denied();
@@ -178,8 +179,9 @@ function upc_users_sync_bamery_register_return() {
           );
 
         //THIS IS ADDED FOR UPC
-        $user = _map_user($new);
+        $new = _map_user($new, $cookie['data']);
         //END OF ADDED PART FOR UPC
+        $account = user_save(new stdClass(), $new);
 
         _user_mail_notify('register_no_approval_required', $account);
         unset($_SESSION['bakery']['register']);
@@ -210,7 +212,8 @@ function upc_users_sync_bamery_register_return() {
 function _user_register_submit($form, &$form_state) {
   //$form_state_copy = $form_state;
   // Create an array of fields to send to the master. We need these four fields.
-  $allowed = array('name', 'mail', 'pass', 'timezone');
+  //$allowed = array('name', 'mail', 'pass', 'timezone');
+  $allowed = _user_fields();
   foreach ($form_state['values'] as $key => $value) {
     if (!in_array($key, $allowed)) {
       unset($form_state['values'][$key]);
@@ -228,8 +231,8 @@ function _user_register_submit($form, &$form_state) {
   // Create cookie and redirect to master. 
   bakery_bake_oatmeal_cookie($data['name'], $data);
   //_user_spread($form, $form_state_copy, 'register');
-  //drupal_goto(variable_get('bakery_master', 'http://drupal.org/') . 'users_sync/bakery');
-  _goto_curl($form, variable_get('bakery_master', 'http://drupal.org/') . 'users_sync/bakery');
+  drupal_goto(variable_get('bakery_master', 'http://drupal.org/') . 'users_sync/bakery');
+  //_goto_curl($form, variable_get('bakery_master', 'http://drupal.org/') . 'users_sync/bakery');
 }
 /**
  * Implementation of hook_form_alter
@@ -273,12 +276,30 @@ function _goto_curl($form,  $url) {
  * to be use in user_save function
  * @return array $user
  */
-function _map_user($userinfo) {
-  $post = unserialize($_POST['form']);
-  //TEST:
-  /*global $user;
-  $post = user_load($user->uid);*/
-  $fields = array(
+function _map_user($userinfo, $fields) {
+  $user = array();
+
+  //complete user information
+  $user['init'] = $userinfo['info']; 
+  foreach($fields as $label => $value) {
+    $user[$label] = (!empty($userinfo[$label])) ? $userinfo[$label] : $value ;
+  }
+  if(!empty($userinfo['authname_bakery'])) {
+    $user['authname_bakery'] = $userinfo['authname_bakery'];
+  }
+  error_log('map_user');
+  error_log(print_r($user,1));
+  return $user;
+}
+/**
+ * List of available fields
+ */
+function _user_fields() 
+  return array(
+    'name',
+    'mail',
+    'pass',
+    'timezone',
     'field_permission_marketing',
     'field_permission_marketing_epe',
     'field_permission_marketing_pos',
@@ -318,28 +339,6 @@ function _map_user($userinfo) {
     'field_user_sex',
     'field_user_socrates_code',
   );
-  $user = array(
-    'name' => $userinfo['name'],
-    'mail' => $userinfo['mail'],
-    'init' => $userinfo['init'],
-    'status' => 1,
-    'pass' => user_password(),
-  );
-
-  if(!empty($userinfo['authname_bakery'])) {
-    $user['authname_bakery'] = $userinfo['authname_bakery'];
-  }
-  
-  dpm($post);
-  error_log(print_r($post,1));
-  foreach ($post as $label => $value) {
-    if(in_array($label, $fields)) {
-      if(!empty($post->$label)) {
-        $user[$label] = $post->$label;
-      }
-    }
-  }
-  return $user;
 }
 /**
  * Create or update User
