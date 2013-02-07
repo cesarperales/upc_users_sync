@@ -294,7 +294,7 @@ function _map_user($userinfo, $fields) {
 /**
  * List of available fields
  */
-function _user_fields() 
+function _user_fields(){ 
   return array(
     'name',
     'mail',
