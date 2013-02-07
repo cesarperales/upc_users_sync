@@ -259,7 +259,6 @@ function _goto_curl($form,  $url) {
     CURLOPT_POSTFIELDS => array(
         'url' => 'http://' . $_SERVER['SERVER_NAME'] ,
         'form' => serialize($form),
-        'form_state' => serialize($form_state),
     )
   ));
   curl_exec($curl);
