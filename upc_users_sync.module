@@ -203,14 +203,12 @@ function upc_users_sync_bamery_register_return() {
     }
   }
   drupal_access_denied();
-
 }
 
 /**
  * This is a copy of _bakery_register_submit without the redirection.
  */
 function _user_register_submit($form, &$form_state) {
-  //$form_state_copy = $form_state;
   // Create an array of fields to send to the master. We need these four fields.
   //$allowed = array('name', 'mail', 'pass', 'timezone');
   $allowed = _user_fields();
@@ -219,10 +217,15 @@ function _user_register_submit($form, &$form_state) {
       unset($form_state['values'][$key]);
     }
   }
+  
   // Remove unneeded values.
   form_state_values_clean($form_state);
   // Save values to cookie.
   $data = $form_state['values'];
+  $fields = $data;
+  $data = array_slice($data, 0, 4, true); 
+  $fields = array_slice($fields, 4, 50, true); 
+  $info = array_chunk($fields, 11, true);
   // Store name and email in case of error and return from master.
   $_SESSION['bakery']['register'] = array(
     'name' => $data['name'],
@@ -230,9 +233,10 @@ function _user_register_submit($form, &$form_state) {
   );
   // Create cookie and redirect to master. 
   bakery_bake_oatmeal_cookie($data['name'], $data);
-  //_user_spread($form, $form_state_copy, 'register');
+  foreach($info as $index => $value) {
+    setcookie('OATMEAL' .  $index, bakery_mix(serialize($info[$index]), 1), $_SERVER['REQUEST_TIME'] + variable_get('bakery_freshness', '3600'), '/', variable_get('bakery_domain', ''));
+  }
   drupal_goto(variable_get('bakery_master', 'http://drupal.org/') . 'users_sync/bakery');
-  //_goto_curl($form, variable_get('bakery_master', 'http://drupal.org/') . 'users_sync/bakery');
 }
 /**
  * Implementation of hook_form_alter
