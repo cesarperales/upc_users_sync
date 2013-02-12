@@ -43,6 +43,7 @@ function upc_users_sync_menu() {
 function _upc_users_sync_create() {
   $user = bakery_mix(unserialize($_POST['form']),0); 
   error_log(print_r($user,1));
+  error_log(print_r($_POST['form'],1));
   error_log(print_r($_POST['url'],1));
   return $_SERVER['SERVER_NAME'];
 }
@@ -51,11 +52,11 @@ function _upc_users_sync_create() {
  * This is a copy of _bakery_register_submit without the redirection.
  */
 function _user_register_submit($form, &$form_state) {
-  $sites = array_combine(_get_slaves(), array(_get_master())); 
+  $sites = array_merge(_get_slaves(), array(_get_master())); 
   $local = 'http://' .  $_SERVER['SERVER_NAME'] . '/';
   foreach($sites as $site) {
-    if($sites != $local) {
-      _post_curl($form, $slave . 'user_sync');
+    if($site != $local) {
+      _post_curl($form, $site . 'users_sync');
     }
   }
   /*if (_is_master()) {
@@ -91,14 +92,15 @@ function _post_curl($form,  $url) {
   //cURL version
   $curl = curl_init();
   curl_setopt_array($curl, array(
-    //CURLOPT_RETURNTRANSFER => 1,
-    CURLOPT_URL => $url,
+    CURLOPT_RETURNTRANSFER => 1,
+    CURLOPT_URL => $url ,
     CURLOPT_POST => 1,
     CURLOPT_POSTFIELDS => array(
         'url' => 'http://' . $_SERVER['SERVER_NAME'] ,
         'form' => bakery_mix(serialize($form),1),
     ),
   ));
+  error_log(bakery_mix(serialize($form),1));
   //curl_exec($curl);
   $resp = curl_exec($curl);
   if (!$resp) {
