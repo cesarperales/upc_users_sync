@@ -4,21 +4,6 @@
  */
 function upc_users_sync_menu() {
   $items = array();
-  /*if(_is_master()){ 
-    $items['users_sync'] = array(
-      'title' => 'Check',
-      'access callback' => 'user_is_anonymous',
-      'page callback' => 'upc_users_sync_check_master',
-      'type' => MENU_CALLBACK,
-    );
-  } else {
-   $items['users_sync'] = array(
-      'title' => 'Check',
-      'access callback' => TRUE,
-      'page callback' => 'upc_users_sync_check_slave',
-      'type' => MENU_CALLBACK,
-    );
-  }*/
   $items['users_sync'] = array(
     'title' => 'Crear cuenta',
     'page callback' => '_upc_users_sync_create',
@@ -41,9 +26,8 @@ function upc_users_sync_menu() {
   return $items;
 }
 function _upc_users_sync_create() {
-  $user = bakery_mix(unserialize($_POST['form']),0); 
+  $user = unserialize(bakery_mix($_POST['form']),0); 
   error_log(print_r($user,1));
-  error_log(print_r($_POST['form'],1));
   error_log(print_r($_POST['url'],1));
   return $_SERVER['SERVER_NAME'];
 }
@@ -59,19 +43,6 @@ function _user_register_submit($form, &$form_state) {
       _post_curl($form, $site . 'users_sync');
     }
   }
-  /*if (_is_master()) {
-    //grabar en esclavo
-    $slaves = _get_slaves();
-    $local = 'http://' .  $_SERVER['SERVER_NAME'] . '/';
-    foreach($slaves as $slave) {
-      if($slave != $local) {
-        _post_curl($form, $slave . 'user_sync');
-      }
-    } 
-  } else {
-    //grabar en master
-    _post_curl($form, $slave . 'user_sync');
-  }*/
 }
 /**
  * Implementation of hook_form_alter
@@ -100,7 +71,7 @@ function _post_curl($form,  $url) {
         'form' => bakery_mix(serialize($form),1),
     ),
   ));
-  error_log(bakery_mix(serialize($form),1));
+  error_log(print_r($form,1));
   //curl_exec($curl);
   $resp = curl_exec($curl);
   if (!$resp) {
