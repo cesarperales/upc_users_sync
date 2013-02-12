@@ -26,25 +26,35 @@ function upc_users_sync_menu() {
   return $items;
 }
 function _upc_users_sync_create() {
-  $user = unserialize(bakery_mix($_POST['form'],0)); 
-  /*$new_account = array(
-    'name' => $user['#user']->name,
-    'pass' => $user['#user']->pass,
-    'mail' => $user['#user']->mail,
+ $user = unserialize(bakery_mix($_POST['form'],0));
+  $user = $user['#user'];
+  $new_account = array(
+    'name' => $user->name,
+    'pass' => $user->pass,
+    'mail' => $user->mail,
     'status' => 1,
-    'init' => $user['#user']->mail,
-  );*/
-  //$account = user_save(NULL, $new_account);
-  $allowed = _user_fields();
-  //delete unwanted fields
-  foreach ($user['#user'] as $label => $value) {
-    if (!in_array($label, $allowed)) {
-      unset($user['#user']->$label);
-    }
-  }
-  $account = user_save(NULL, $user);
+    'init' => $user->mail,
+    'field_user_firstname' => array('und'=> array(0 => array('value' => $user->field_user_firstname['und'][0]['value']))),
+    'field_user_lastname' => array('und'=> array(0 => array('value' => $user->field_user_lastname['und'][0]['value']))),
+    'field_user_mother_lastname' => array('und'=> array(0 => array('value' => $user->field_user_mother_lastname['und'][0]['value']))),
+    'field_user_mother_lastname' => array('und'=> array(0 => array('value' => $user->field_user_mother_lastname['und'][0]['value']))),
+    'field_user_nationality' => array('und'=> array(0 => array('value' => $user->field_user_nationality['und'][0]['value']))),
+    'field_user_sex' => array('und'=> array(0 => array('value' => $user->field_user_sex['und'][0]['value']))),
+    //'field_user_lastname' => array('und'=> array('value' => $user->name)),
+    //information personal
+    'field_document' => array('und'=> array(0 => array('value' => $user->field_document['und'][0]['value']))),
+    //'field_document_type_term' => array('und'=> array(0 => array('value' => $user->field_document_type_term['und'][0]['tid']))),
+    'field_user_birthday' => array('und'=> array(0 => array('value' => $user->field_user_birthday['und'][0]['value']))),
+    'field_user_birthday' => array('und'=> array(0 => array('timezone' => $user->field_user_birthday['und'][0]['timezone']))),
+    'field_user_birthday' => array('und'=> array(0 => array('date_type' => $user->field_user_birthday['und'][0]['date_type']))),
+    //'field_user_grade_term' => array('und'=> array(0 => array('date_type' => $user->field_user_grade_term['und'][0]['tid']))),
+    //'field_user_address_via' => array('und'=> array(0 => array('date_type' => $user->field_user_grade_term['und'][0]['tid']))),
+
+  );
   error_log(print_r($user,1));
-  error_log('hola');
+  $account = user_save(NULL, $new_account);
+  //$allowed = _user_fields();
+  //delete unwanted fields
   error_log(print_r($account,1));
   return 'hola';
 }
