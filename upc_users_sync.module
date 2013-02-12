@@ -27,9 +27,19 @@ function upc_users_sync_menu() {
 }
 function _upc_users_sync_create() {
   $user = unserialize(bakery_mix($_POST['form'],0)); 
+  $new_account = array(
+    'name' => $user['#user']->name,
+    'pass' => $user['#user']->pass,
+    'init' => $user['#user']->mail,
+    'status' => 1,
+    'init' => $user['#user']->init,
+  );
+  $account = user_save(NULL, $new_account);
+
   error_log(print_r($user,1));
-  error_log(print_r($_POST['url'],1));
-  return $_SERVER['SERVER_NAME'];
+  error_log('hola');
+  error_log(print_r($account,1));
+  return $account;
 }
 
 /**
