@@ -58,7 +58,21 @@ function _upc_users_sync_create() {
     'field_user_mobile_phone' => array('und'=> array(0 => array('value' => $user->field_user_mobile_phone['und'][0]['value']))),
 
     //INFORMACION LABORAL
+    'field_user_business_name' => $user->field_user_business_name,
+    'field_user_business_doc_type' => $user->field_user_business_doc_type,
+    'field_user_business_document' => $user->field_user_business_document,
+    'field_user_business_hq_via' => $user->field_user_business_hq_via,
+    'field_user_business_hq_address' => $user->field_user_business_hq_address,
+    'field_user_business_hq_urba' => $user->field_user_business_hq_urba,
+    'field_user_business_hq_ubigeo' => $user->field_user_business_hq_ubigeo,
+    'field_user_business_hq_city' => $user->field_user_business_hq_city,
+    'field_user_business_hq_phone' => $user->field_user_business_hq_phone,
+    'field_user_level_charge' => $user->field_user_level_charge,
+    'field_user_charge' => $user->field_user_charge,
+    'field_user_work_area_term' => $user->field_user_work_area_term,
+    'field_user_business_mail' => $user->field_user_business_mail,
 
+    //AREA DE INTERES
   );
   error_log(print_r($user,1));
   error_log('                ||  ');
@@ -170,12 +184,12 @@ function _user_fields(){
     'field_user_business_hq_via',
     'field_user_business_mail',
     'field_user_business_name',
-    'field_user_charge',
     'field_user_courtesy_title_term',
     'field_user_firstname',
     'field_user_grade_term',
     'field_user_interest_area_term',
     'field_user_lastname',
+    'field_user_charge',
     'field_user_level_charge',
     'field_user_mobile_phone',
     'field_user_mother_lastname',
