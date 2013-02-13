@@ -28,52 +28,8 @@ function upc_users_sync_menu() {
 function _upc_users_sync_create() {
  $user = unserialize(bakery_decrypt($_POST['form']));
   $user = $user['#user'];
-  $new_account = array(
-    'name' => $user->name,
-    'pass' => $user->pass,
-    'mail' => $user->mail,
-    'status' => 1,
-    'init' => $user->mail,
-    'timezone' => $user->timezone,
-    'field_user_firstname' => array('und'=> array(0 => array('value' => $user->field_user_firstname['und'][0]['value']))),
-    'field_user_lastname' => array('und'=> array(0 => array('value' => $user->field_user_lastname['und'][0]['value']))),
-    'field_user_mother_lastname' => array('und'=> array(0 => array('value' => $user->field_user_mother_lastname['und'][0]['value']))),
-    'field_user_mother_lastname' => array('und'=> array(0 => array('value' => $user->field_user_mother_lastname['und'][0]['value']))),
-    'field_user_nationality' => array('und'=> array(0 => array('value' => $user->field_user_nationality['und'][0]['value']))),
-    'field_user_sex' => array('und'=> array(0 => array('value' => $user->field_user_sex['und'][0]['value']))),
 
-    //INFORMACION PERSONAL
-    'field_document' => array('und'=> array(0 => array('value' => $user->field_document['und'][0]['value']))),
-    //'field_document_type_term' => array('und'=> array(0 => array('tid' => $user->field_document_type_term['und'][0]['tid']))),
-    'field_user_birthday' => array('und'=> array(0 => array('value' => $user->field_user_birthday['und'][0]['value']))),
-    'field_user_birthday' => array('und'=> array(0 => array('timezone' => $user->field_user_birthday['und'][0]['timezone']))),
-    'field_user_birthday' => array('und'=> array(0 => array('date_type' => $user->field_user_birthday['und'][0]['date_type']))),
-    //'field_user_grade_term' => array('und'=> array(0 => array('tid' => $user->field_user_grade_term['und'][0]['tid']))),
-    //'field_user_address_via' => array('und'=> array(0 => array('tid' => $user->field_user_grade_term['und'][0]['tid']))),
-    'field_user_address' => array('und'=> array(0 => array('value' => $user->field_user_address['und'][0]['value']))),
-    'field_user_address_urba' => array('und'=> array(0 => array('value' => $user->field_user_address_urba['und'][0]['value']))),
-    //'field_user_address_ubigeo' => array('und'=> array(0 => array('tid' => $user->field_user_address_ubigeo['und'][0]['tid']))),
-    'field_user_address_city' => array('und'=> array(0 => array('value' => $user->field_user_address_city['und'][0]['value']))),
-    'field_user_phone' => array('und'=> array(0 => array('value' => $user->field_user_phone['und'][0]['value']))),
-    'field_user_mobile_phone' => array('und'=> array(0 => array('value' => $user->field_user_mobile_phone['und'][0]['value']))),
-
-    //INFORMACION LABORAL
-    'field_user_business_name' => $user->field_user_business_name,
-    'field_user_business_doc_type' => $user->field_user_business_doc_type,
-    'field_user_business_document' => $user->field_user_business_document,
-    'field_user_business_hq_via' => $user->field_user_business_hq_via,
-    'field_user_business_hq_address' => $user->field_user_business_hq_address,
-    'field_user_business_hq_urba' => $user->field_user_business_hq_urba,
-    'field_user_business_hq_ubigeo' => $user->field_user_business_hq_ubigeo,
-    'field_user_business_hq_city' => $user->field_user_business_hq_city,
-    'field_user_business_hq_phone' => $user->field_user_business_hq_phone,
-    'field_user_level_charge' => $user->field_user_level_charge,
-    'field_user_charge' => $user->field_user_charge,
-    'field_user_work_area_term' => $user->field_user_work_area_term,
-    'field_user_business_mail' => $user->field_user_business_mail,
-
-    //AREA DE INTERES
-  );
+  $new_account = _map_user($user);
   error_log(print_r($user,1));
   error_log('                ||  ');
   error_log('                ||  ');
@@ -134,21 +90,37 @@ function _post_curl($form,  $url) {
 }
 /**
  * Create User Array
- * Collect information from cookies and post and create an user array
+ * Collect information from post and create an user array
  * to be use in user_save function
  * @return array $user
  */
-function _map_user($userinfo, $fields) {
+//function _map_user($userinfo, $fields) {
+function _map_user($post) {
   $user = array();
+  $map = _user_fields();
 
+  $user['init'] = $post->mail;
+  $user['status'] = 1;
+  foreach ($map as $index => $value) {
+    switch($value) {
+      case 'direct':
+        $user[$index] => $post[$index];
+        break;
+      case 'value': 
+        $user[$index] => array('und' => array(0 => array('value' => $post->$index['und'][0]['value'])));
+        break;
+      case 'tid':
+        //@TODO post information must send string value and we will find its equivalent
+        //taxonomy_get_term_by_name
+        $term = $post->$index['und'][0]['tid'];
+        $user[$index] => array('und' => array(0 => array('tid' => $term)));
+        break;
+    }
+  }
   //complete user information
-  $user['init'] = $userinfo['info']; 
-  foreach($fields as $label => $value) {
-    $user[$label] = (!empty($userinfo[$label])) ? $userinfo[$label] : $value ;
-  }
-  if(!empty($userinfo['authname_bakery'])) {
+  /*if(!empty($userinfo['authname_bakery'])) {
     $user['authname_bakery'] = $userinfo['authname_bakery'];
-  }
+  }*/
   return $user;
 }
 /**
@@ -156,48 +128,46 @@ function _map_user($userinfo, $fields) {
  */
 function _user_fields(){ 
   return array(
-    'name',
-    'mail',
-    'pass',
-    'timezone',
-    'field_permission_marketing',
+    'name' => 'direct',
+    'mail' => 'direct',
+    'pass' => 'direct',
+    'timezone' => 'direct',
+    /*'field_permission_marketing' ,
     'field_permission_marketing_epe',
     'field_permission_marketing_pos',
     'field_permission_marketing_pre',
-    'field_reusable_observation',
-    'field_user_address',
-    'field_user_address_city',
-    'field_user_address_ubigeo',
-    'field_user_address_urba',
-    'field_user_address_via',
-    'field_user_birthday',
-    'field_user_business_code',
-    'field_user_business_doc_type',
-    'field_user_business_document',
-    'field_user_business_hq_address',
-    'field_user_business_hq_city',
-    'field_user_business_hq_code',
-    'field_user_business_hq_name',
-    'field_user_business_hq_phone',
-    'field_user_business_hq_ubigeo',
-    'field_user_business_hq_urba',
-    'field_user_business_hq_via',
-    'field_user_business_mail',
-    'field_user_business_name',
-    'field_user_courtesy_title_term',
-    'field_user_firstname',
-    'field_user_grade_term',
-    'field_user_interest_area_term',
-    'field_user_lastname',
-    'field_user_charge',
-    'field_user_level_charge',
-    'field_user_mobile_phone',
-    'field_user_mother_lastname',
-    'field_user_nationality',
-    'field_user_nick',
-    'field_user_phone',
-    'field_user_sex',
-    'field_user_socrates_code',
+    'field_reusable_observation',*/
+    'field_user_address' => 'value',
+    'field_user_address_city' => 'value',
+    'field_user_address_ubigeo' => 'tid',
+    'field_user_address_urba' => 'value',
+    'field_user_address_via' => 'tid',
+    'field_user_birthday' => 'value',
+    //'field_user_business_code' => ,
+    'field_user_business_doc_type' => 'tid',
+    'field_user_business_document' => 'value',
+    'field_user_business_hq_address' => 'value',
+    'field_user_business_hq_city' => 'value',
+    'field_user_business_hq_phone' => 'value',
+    'field_user_business_hq_ubigeo' => 'tid',
+    'field_user_business_hq_urba' => 'value',
+    'field_user_business_hq_via' => 'tid',
+    'field_user_business_mail' => 'value',
+    'field_user_business_name' => 'value',
+    //'field_user_courtesy_title_term' => , 
+    'field_user_firstname' => 'value',
+    'field_user_grade_term' => 'tid',
+    //'field_user_interest_area_term' ,
+    'field_user_lastname' => 'value',
+    'field_user_charge' => 'value',
+    'field_user_level_charge' => 'tid',
+    'field_user_mobile_phone' => 'value',
+    'field_user_mother_lastname' => 'value',
+    'field_user_nationality' => 'value',
+    'field_user_nick' => 'value',
+    'field_user_phone' => 'value',
+    'field_user_sex' => 'value',
+    //'field_user_socrates_code' ,
   );
 }
 /**
