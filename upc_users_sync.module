@@ -34,27 +34,39 @@ function _upc_users_sync_create() {
     'mail' => $user->mail,
     'status' => 1,
     'init' => $user->mail,
+    'timezone' => $user->timezone,
     'field_user_firstname' => array('und'=> array(0 => array('value' => $user->field_user_firstname['und'][0]['value']))),
     'field_user_lastname' => array('und'=> array(0 => array('value' => $user->field_user_lastname['und'][0]['value']))),
     'field_user_mother_lastname' => array('und'=> array(0 => array('value' => $user->field_user_mother_lastname['und'][0]['value']))),
     'field_user_mother_lastname' => array('und'=> array(0 => array('value' => $user->field_user_mother_lastname['und'][0]['value']))),
     'field_user_nationality' => array('und'=> array(0 => array('value' => $user->field_user_nationality['und'][0]['value']))),
     'field_user_sex' => array('und'=> array(0 => array('value' => $user->field_user_sex['und'][0]['value']))),
-    //'field_user_lastname' => array('und'=> array('value' => $user->name)),
-    //information personal
+
+    //INFORMACION PERSONAL
     'field_document' => array('und'=> array(0 => array('value' => $user->field_document['und'][0]['value']))),
-    //'field_document_type_term' => array('und'=> array(0 => array('value' => $user->field_document_type_term['und'][0]['tid']))),
+    //'field_document_type_term' => array('und'=> array(0 => array('tid' => $user->field_document_type_term['und'][0]['tid']))),
     'field_user_birthday' => array('und'=> array(0 => array('value' => $user->field_user_birthday['und'][0]['value']))),
     'field_user_birthday' => array('und'=> array(0 => array('timezone' => $user->field_user_birthday['und'][0]['timezone']))),
     'field_user_birthday' => array('und'=> array(0 => array('date_type' => $user->field_user_birthday['und'][0]['date_type']))),
-    //'field_user_grade_term' => array('und'=> array(0 => array('date_type' => $user->field_user_grade_term['und'][0]['tid']))),
-    //'field_user_address_via' => array('und'=> array(0 => array('date_type' => $user->field_user_grade_term['und'][0]['tid']))),
+    //'field_user_grade_term' => array('und'=> array(0 => array('tid' => $user->field_user_grade_term['und'][0]['tid']))),
+    //'field_user_address_via' => array('und'=> array(0 => array('tid' => $user->field_user_grade_term['und'][0]['tid']))),
+    'field_user_address' => array('und'=> array(0 => array('value' => $user->field_user_address['und'][0]['value']))),
+    'field_user_address_urba' => array('und'=> array(0 => array('value' => $user->field_user_address_urba['und'][0]['value']))),
+    //'field_user_address_ubigeo' => array('und'=> array(0 => array('tid' => $user->field_user_address_ubigeo['und'][0]['tid']))),
+    'field_user_address_city' => array('und'=> array(0 => array('value' => $user->field_user_address_city['und'][0]['value']))),
+    'field_user_phone' => array('und'=> array(0 => array('value' => $user->field_user_phone['und'][0]['value']))),
+    'field_user_mobile_phone' => array('und'=> array(0 => array('value' => $user->field_user_mobile_phone['und'][0]['value']))),
+
+    //INFORMACION LABORAL
 
   );
   error_log(print_r($user,1));
+  error_log('                ||  ');
+  error_log('                ||  ');
+  error_log('                ||  ');
+  error_log('                ||  ');
+  error_log('                \/  ');
   $account = user_save(NULL, $new_account);
-  //$allowed = _user_fields();
-  //delete unwanted fields
   error_log(print_r($account,1));
   return 'hola';
 }
