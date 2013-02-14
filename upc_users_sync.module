@@ -107,7 +107,7 @@ function _map_user($post) {
         $user[$index] = $post->$index;
         break;
       case 'value': 
-        $user[$index] = array('und' => array(0 => array('value' => $post->$index['und'][0]['value'])));
+        $user[$index] = array('und' => array(0 => array('value' => $post->{$index}['und'][0]['value'])));
         break;
       case 'tid':
         //@TODO post information must send string value and we will find its equivalent
