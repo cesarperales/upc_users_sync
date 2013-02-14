@@ -104,15 +104,18 @@ function _map_user($post) {
   foreach ($map as $index => $value) {
     switch($value) {
       case 'direct':
-        $user[$index] = $post->$index;
+        error_log('direct');
+        $user[$index] = $post->{$index};
         break;
       case 'value': 
+        error_log('value');
         $user[$index] = array('und' => array(0 => array('value' => $post->{$index}['und'][0]['value'])));
         break;
       case 'tid':
+        error_log('tid');
         //@TODO post information must send string value and we will find its equivalent
         //taxonomy_get_term_by_name
-        $term = $post->$index['und'][0]['tid'];
+        $term = $post->{$index}['und'][0]['tid'];
         $user[$index] = array('und' => array(0 => array('tid' => $term)));
         break;
     }
