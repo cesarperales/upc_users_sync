@@ -125,14 +125,10 @@ function _map_user($post) {
         break;
       case 'tid':
         error_log($post->{$index}['und'][0]['term']);
+        //@todo add vocabulary
         $term = taxonomy_get_term_by_name($post->{$index}['und'][0]['term']);
-        $term = current($term->tid);
-
-        error_log(print_r($term,1));
-        //@TODO post information must send string value and we will find its equivalent
-        //taxonomy_get_term_by_name
-        //$term = $post->{$index}['und'][0]['tid'];
-        $user[$index] = array('und' => array(0 => array('tid' => $term)));
+        $term = current($term);
+        $user[$index] = array('und' => array(0 => array('tid' => $term->tid)));
         break;
     }
   }
@@ -176,10 +172,11 @@ function _user_fields(){
     //'field_user_courtesy_title_term' => , 
     'field_user_firstname' => 'value',
     'field_user_grade_term' => 'tid',
-    //'field_user_interest_area_term' ,
+    //'field_user_interest_area_term',
     'field_user_lastname' => 'value',
     'field_user_charge' => 'value',
     'field_user_level_charge' => 'tid',
+    'field_user_work_area' => 'tid',
     'field_user_mobile_phone' => 'value',
     'field_user_mother_lastname' => 'value',
     'field_user_nationality' => 'value',
