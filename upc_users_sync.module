@@ -104,7 +104,7 @@ function _map_user($post) {
   foreach ($map as $index => $value) {
     switch($value) {
       case 'direct':
-        $user[$index] = $post[$index];
+        $user[$index] = $post->$index;
         break;
       case 'value': 
         $user[$index] = array('und' => array(0 => array('value' => $post->$index['und'][0]['value'])));
