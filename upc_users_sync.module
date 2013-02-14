@@ -50,10 +50,12 @@ function _user_register_submit($form, &$form_state) {
   foreach ($form['#user'] as $index => $value) {
     if (is_array($form['#user']->{$index})) {
       if (isset($form['#user']->{$index}['und'][0]['tid'])) {
-        $term = taxonomy_term_load($form['#user']->{$index}['und'][0]['tid']);
-        $term = $term->name;
-        $form['#user']->{$index}['und'][0]['term'] = $term;
-        error_log($index . ' ' . $term);
+        foreach($form['#user']->{$index}['und'] as $i => $a) {
+          $term = taxonomy_term_load($form['#user']->{$index}['und'][$i]['tid']);
+          $term = $term->name;
+          $form['#user']->{$index}['und'][$i]['term'] = $term;
+          error_log($index . ' ' . $term);
+        }
       }
     }
   }
@@ -73,6 +75,7 @@ function _user_register_submit($form, &$form_state) {
  */
 function upc_users_sync_form_alter(&$form, $form_state, $form_id) {
   if ($form_id == 'user_register_form') {
+    dpm($form);
     $form['#submit'] = array();
     //overrides default and bakery submit functions
     //default, graba en local
@@ -124,11 +127,19 @@ function _map_user($post) {
         $user[$index] = array('und' => array(0 => array('value' => $post->{$index}['und'][0]['value'])));
         break;
       case 'tid':
-        error_log($post->{$index}['und'][0]['term']);
         //@todo add vocabulary
         $term = taxonomy_get_term_by_name($post->{$index}['und'][0]['term']);
         $term = current($term);
         $user[$index] = array('und' => array(0 => array('tid' => $term->tid)));
+        break;
+      case 'multiple':
+        $multiple = $post->{$index}['und'];
+        foreach($multiple as $i => $value) {
+          //@todo add vocabulary
+          $term = taxonomy_get_term_by_name($post->{$index}['und'][$i]['term']); 
+          $term = current($term); 
+          $user[$index]['und'][$i]['tid'] = $term->tid;
+        }
         break;
     }
   }
@@ -174,7 +185,6 @@ function _user_fields(){
     //'field_user_courtesy_title_term' => , 
     'field_user_firstname' => 'value',
     'field_user_grade_term' => 'tid',
-    //'field_user_interest_area_term',
     'field_user_lastname' => 'value',
     'field_user_charge' => 'value',
     'field_user_level_charge' => 'tid',
@@ -185,6 +195,7 @@ function _user_fields(){
     'field_user_nick' => 'value',
     'field_user_phone' => 'value',
     'field_user_sex' => 'value',
+    'field_user_interest_area_term' => 'multiple',
     //'field_user_socrates_code' ,
   );
 }
