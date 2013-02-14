@@ -45,10 +45,24 @@ function _upc_users_sync_create() {
  * Send user information to all sites.
  */
 function _user_register_submit($form, &$form_state) {
+
+  //send term name too
+  foreach ($form['#user'] as $index => $value) {
+    if (is_array($form['#user']->{$index})) {
+      if (isset($form['#user']->{$index}['und'][0]['tid'])) {
+        $term = taxonomy_term_load($form['#user']->{$index}['und'][0]['tid']);
+        $term = $term->name;
+        $form['#user']->{$index}['und'][0]['term'] = $term;
+        error_log($index . ' ' . $term);
+      }
+    }
+  }
+
   $sites = array_merge(_get_slaves(), array(_get_master())); 
   $local = 'http://' .  $_SERVER['SERVER_NAME'] . '/';
   foreach($sites as $site) {
     if($site != $local) {
+       error_log('shoot to : ' . $local);
       _post_curl($form, $site . 'users_sync');
     }
   }
@@ -73,7 +87,7 @@ function _post_curl($form,  $url) {
   $curl = curl_init();
   curl_setopt_array($curl, array(
     CURLOPT_RETURNTRANSFER => 1,
-    CURLOPT_URL => $url ,
+    CURLOPT_URL => $url,
     CURLOPT_POST => 1,
     CURLOPT_POSTFIELDS => array(
         'url' => 'http://' . $_SERVER['SERVER_NAME'] ,
@@ -102,17 +116,17 @@ function _map_user($post) {
   $user['init'] = $post->mail;
   $user['status'] = 1;
   foreach ($map as $index => $value) {
-    switch($value) {
+    switch ($value) {
       case 'direct':
-        error_log('direct');
         $user[$index] = $post->{$index};
         break;
       case 'value': 
-        error_log('value');
         $user[$index] = array('und' => array(0 => array('value' => $post->{$index}['und'][0]['value'])));
         break;
       case 'tid':
-        error_log('tid');
+        error_log($post->{$index}['und'][0]['term']);
+        $term = taxonomy_get_term_by_name($post->{$index}['und'][0]['term']);
+        error_log(print_r($term,1));
         //@TODO post information must send string value and we will find its equivalent
         //taxonomy_get_term_by_name
         $term = $post->{$index}['und'][0]['tid'];
