@@ -30,15 +30,20 @@ function _upc_users_sync_create() {
   $user = $user['#user'];
 
   $new_account = _map_user($user);
-  error_log(print_r($user,1));
+  /*error_log(print_r($user,1));
   error_log('                ||  ');
   error_log('                ||  ');
   error_log('                ||  ');
   error_log('                ||  ');
-  error_log('                \/  ');
+  error_log('                \/  ');*/
   $account = user_save(NULL, $new_account);
-  error_log(print_r($account,1));
-  return 'hola';
+  //error_log(print_r($account,1));
+  //inicia sesion
+  $init = _bakery_init_field($account->uid);
+        _bakery_bake_chocolatechip_cookie($account->name, $account->mail, $init);
+        bakery_user_external_login($account);
+
+  return 'cuenta creada';
 }
 
 /**
@@ -91,8 +96,8 @@ function upc_users_sync_form_alter(&$form, $form_state, $form_id) {
     //probemos redirigir a master y ahi editamos y luego regresamos
     // $form['#submit'] = array();
     //$form['#submit'][] = '_user_register_submit';  
-      $form = array();
-      $form_state = array();
+      //$form = array();
+      //$form_state = array();
     if (!variable_get('bakery_is_master', 0) && !user_access('administer users')) {
       $init_url = _bakery_init_field_url($form['#user']->init);
       unset($form);
