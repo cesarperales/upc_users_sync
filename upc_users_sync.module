@@ -56,7 +56,7 @@ function _upc_users_sync_create() {
     _bakery_bake_chocolatechip_cookie($account->name, $account->mail, $init);
     bakery_user_external_login($account);
   } else {
-    watchdog('user', 'upc_users_sync: %name cant be created, already exists a account with same !error.', array('%name' => $account->name, '!error' => error[0]), WATCHDOG_WARNING, l(t('edit'), 'user/'. $account->uid .'/edit'));
+    watchdog('user', 'upc_users_sync: %name cant be created, already exists a account with same !error.', array('%name' => $account->name, '!error' => $errors[0]), WATCHDOG_WARNING, l(t('edit'), 'user/'. $account->uid .'/edit'));
     return 'cuenta no creada';
   }
   return 'cuenta creada';
@@ -82,6 +82,9 @@ function _user_register_submit($form, &$form_state) {
 
   $sites = array_merge(_get_slaves(), array(_get_master())); 
   $local = 'http://' .  $_SERVER['SERVER_NAME'] . '/';
+
+  $form['#user']->field_account_origin['und'][0]['value'] = $local;
+
   foreach($sites as $site) {
     if($site != $local) {
        error_log('shoot to : ' . $local);
@@ -245,6 +248,8 @@ function _user_fields(){
     'field_user_business_hq_name' => 'value',
     'field_user_socrates_code' => 'value',
     'field_reusable_observation' => 'value',
+    //origen de la cuenta 
+    'field_account_origin' => 'value',
   );
 }
 /**
