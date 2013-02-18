@@ -26,23 +26,39 @@ function upc_users_sync_menu() {
   return $items;
 }
 function _upc_users_sync_create() {
- $user = unserialize(bakery_decrypt($_POST['form']));
+  $user = unserialize(bakery_decrypt($_POST['form']));
   $user = $user['#user'];
+  $errors = array();
 
-  $new_account = _map_user($user);
-  /*error_log(print_r($user,1));
-  error_log('                ||  ');
-  error_log('                ||  ');
-  error_log('                ||  ');
-  error_log('                ||  ');
-  error_log('                \/  ');*/
-  $account = user_save(NULL, $new_account);
-  //error_log(print_r($account,1));
-  //inicia sesion
-  $init = _bakery_init_field($account->uid);
-        _bakery_bake_chocolatechip_cookie($account->name, $account->mail, $init);
-        bakery_user_external_login($account);
-
+  $account = user_load_by_mail($post->mail);
+  if ($account) {
+    $errors[] = 'mail';
+  }
+  else {
+    // Check username.
+    $account = user_load_by_name($post->name);
+    if ($account) {
+      $errors[] = 'mail';
+    }
+  }
+  if(empty($errors)) {
+    $new_account = _map_user($user);
+    /*error_log(print_r($user,1));
+      error_log('                ||  ');
+      error_log('                ||  ');
+      error_log('                ||  ');
+      error_log('                ||  ');
+      error_log('                \/  ');*/
+    $account = user_save(NULL, $new_account);
+    //error_log(print_r($account,1));
+    //inicia sesion
+    $init = _bakery_init_field($account->uid);
+    _bakery_bake_chocolatechip_cookie($account->name, $account->mail, $init);
+    bakery_user_external_login($account);
+  } else {
+    watchdog('user', 'upc_users_sync: %name cant be created, already exists a account with same !error.', array('%name' => $account->name, '!error' => error[0]), WATCHDOG_WARNING, l(t('edit'), 'user/'. $account->uid .'/edit'));
+    return 'cuenta no creada';
+  }
   return 'cuenta creada';
 }
 
@@ -52,10 +68,7 @@ function _upc_users_sync_create() {
 function _user_register_submit($form, &$form_state) {
 
   //send term name too
-  error_log($form['#user']->pass);
-  error_log(print_r($form['#user']->password,1));
   foreach ($form['#user'] as $index => $value) {
-    error_log($index);
     if (is_array($form['#user']->{$index})) {
       if (isset($form['#user']->{$index}['und'][0]['tid'])) {
         foreach($form['#user']->{$index}['und'] as $i => $a) {
@@ -165,6 +178,12 @@ function _map_user($post) {
           $user[$index]['und'][$i]['tid'] = $term->tid;
         }
         break;
+      case 'marketing':
+        $marketing = $post->{$index}['und'];
+        foreach($marketing as $i =>  $permission) {
+          $user[$index]['und'][$i]['value'] = $post->{$index}['und'][$i]['value'];
+        }
+        break;
     }
   }
   //complete user information
@@ -183,11 +202,11 @@ function _user_fields(){
     //'pass' => 'direct',
     'timezone' => 'direct',
     'field_permission_marketing' => 'value',
-    /*
-    'field_permission_marketing_epe',
-    'field_permission_marketing_pos',
-    'field_permission_marketing_pre',
-    */
+    
+    'field_permission_marketing_epe' => 'marketing',
+    'field_permission_marketing_pos' => 'marketing',
+    'field_permission_marketing_pre' => 'marketing',
+    
     'field_user_address' => 'value',
     'field_user_address_city' => 'value',
     'field_user_address_ubigeo' => 'tid',
