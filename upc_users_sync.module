@@ -47,14 +47,16 @@ function _upc_users_sync_create() {
 function _user_register_submit($form, &$form_state) {
 
   //send term name too
+  error_log($form['#user']->pass);
+  error_log(print_r($form['#user']->password,1));
   foreach ($form['#user'] as $index => $value) {
+    error_log($index);
     if (is_array($form['#user']->{$index})) {
       if (isset($form['#user']->{$index}['und'][0]['tid'])) {
         foreach($form['#user']->{$index}['und'] as $i => $a) {
           $term = taxonomy_term_load($form['#user']->{$index}['und'][$i]['tid']);
           $term = $term->name;
           $form['#user']->{$index}['und'][$i]['term'] = $term;
-          error_log($index . ' ' . $term);
         }
       }
     }
@@ -69,19 +71,36 @@ function _user_register_submit($form, &$form_state) {
     }
   }
 }
+
+function _user_profile_form_submit() {}
 /**
  * Implementation of hook_form_alter
  * Triggers _user_check function when submitting the register form
  */
 function upc_users_sync_form_alter(&$form, $form_state, $form_id) {
   if ($form_id == 'user_register_form') {
-    dpm($form);
     $form['#submit'] = array();
     //overrides default and bakery submit functions
     //default, graba en local
     $form['#submit'][] = 'user_register_submit';  
     //graba en los demas
     $form['#submit'][] = '_user_register_submit'; 
+  }
+  if($form_id == 'user_profile_form') {
+    //Agregamos o reemplazamos? 
+    //probemos redirigir a master y ahi editamos y luego regresamos
+    // $form['#submit'] = array();
+    //$form['#submit'][] = '_user_register_submit';  
+      $form = array();
+      $form_state = array();
+    if (!variable_get('bakery_is_master', 0) && !user_access('administer users')) {
+      $init_url = _bakery_init_field_url($form['#user']->init);
+      unset($form);
+      unset($form_state);
+      $form = array();
+      $form_state = array();
+
+    }
   }
 }
 
@@ -97,12 +116,12 @@ function _post_curl($form,  $url) {
         'form' => bakery_encrypt(serialize($form)),
     ),
   ));
-  //curl_exec($curl);
   $resp = curl_exec($curl);
   if (!$resp) {
     drupal_set_message(t('Error %error for site at %url', array('%error' => curl_error($curl) .' '. curl_errno($curl), '%url' => $url)));
   } else {
-    drupal_set_message($resp);
+    //drupal_set_message($resp);
+    drupal_set_message(t('Cuenta creada en %url', array('%url' => $url)));
   }
 }
 /**
@@ -111,13 +130,13 @@ function _post_curl($form,  $url) {
  * to be use in user_save function
  * @return array $user
  */
-//function _map_user($userinfo, $fields) {
 function _map_user($post) {
   $user = array();
   $map = _user_fields();
 
   $user['init'] = $post->mail;
   $user['status'] = 1;
+  $user['pass'] = $post->password;
   foreach ($map as $index => $value) {
     switch ($value) {
       case 'direct':
@@ -156,13 +175,14 @@ function _user_fields(){
   return array(
     'name' => 'direct',
     'mail' => 'direct',
-    'pass' => 'direct',
+    //'pass' => 'direct',
     'timezone' => 'direct',
-    /*'field_permission_marketing' ,
+    'field_permission_marketing' => 'value',
+    /*
     'field_permission_marketing_epe',
     'field_permission_marketing_pos',
     'field_permission_marketing_pre',
-    'field_reusable_observation',*/
+    */
     'field_user_address' => 'value',
     'field_user_address_city' => 'value',
     'field_user_address_ubigeo' => 'tid',
@@ -171,7 +191,6 @@ function _user_fields(){
     'field_user_birthday' => 'value',
     'field_document' => 'value',
     'field_document_type_term' => 'tid',
-    //'field_user_business_code' => ,
     'field_user_business_doc_type' => 'tid',
     'field_user_business_document' => 'value',
     'field_user_business_hq_address' => 'value',
@@ -182,7 +201,7 @@ function _user_fields(){
     'field_user_business_hq_via' => 'tid',
     'field_user_business_mail' => 'value',
     'field_user_business_name' => 'value',
-    //'field_user_courtesy_title_term' => , 
+    'field_user_courtesy_title_term' => 'tid', 
     'field_user_firstname' => 'value',
     'field_user_grade_term' => 'tid',
     'field_user_lastname' => 'value',
@@ -192,11 +211,16 @@ function _user_fields(){
     'field_user_mobile_phone' => 'value',
     'field_user_mother_lastname' => 'value',
     'field_user_nationality' => 'value',
-    'field_user_nick' => 'value',
     'field_user_phone' => 'value',
     'field_user_sex' => 'value',
     'field_user_interest_area_term' => 'multiple',
-    //'field_user_socrates_code' ,
+
+    'field_user_nick' => 'value',
+    'field_user_business_code' => 'value',
+    'field_user_business_hq_code' => 'value',
+    'field_user_business_hq_name' => 'value',
+    'field_user_socrates_code' => 'value',
+    'field_reusable_observation' => 'value',
   );
 }
 /**
