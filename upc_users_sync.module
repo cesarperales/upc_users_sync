@@ -27,10 +27,11 @@ function upc_users_sync_menu() {
 }
 function _upc_users_sync_create() {
   $user = unserialize(bakery_decrypt($_POST['form']));
-  $form = $user; //to send to slaves
-  $user = $user['#user'];
+  $user_copy = $user; //to send to slaves
   $errors = array();
 
+  error_log(print_r($user->mail,1));
+  error_log(print_r($user->name,1));
   if (_is_master()){
     // Check mail.
     $account = user_load_by_mail($user->mail);
@@ -54,7 +55,7 @@ function _upc_users_sync_create() {
     if (_is_master() && !empty($account->uid)) {
       $slaves = _get_slaves();
       foreach($slaves as $slave) {
-        _post_curl($form, $slave . 'users_sync');
+        _post_curl($user_copy, $slave . 'users_sync');
       }
     }
     //inicia sesion
@@ -72,32 +73,37 @@ function _upc_users_sync_create() {
  * Send user information to all sites.
  */
 function _user_register_submit($form, &$form_state) {
+  $user = new stdClass();
 
-  //send term name becouse they have different tid accross sites
-  foreach ($form['#user'] as $index => $value) {
-    if (is_array($form['#user']->{$index})) {
-      if (isset($form['#user']->{$index}['und'][0]['tid'])) {
-        foreach($form['#user']->{$index}['und'] as $i => $a) {
-          $term = taxonomy_term_load($form['#user']->{$index}['und'][$i]['tid']);
+  $f = $form_state['values'];
+  foreach($f as $index => $value) {
+    $user->{$index} = $value;
+    if (is_array($f[$index])) {
+      if (isset($f[$index]['und'][0]['tid'])) {
+        foreach ($f[$index]['und'] as $i => $a) {
+          $term = taxonomy_term_load($f[$index]['und'][$i]['tid']);
           $term = $term->name;
-          $form['#user']->{$index}['und'][$i]['term'] = $term;
-        }
+          $user->{$index}['und'][$i]['term'] = $term;
+        } 
       }
     }
   }
 
   $local = 'http://' .  $_SERVER['SERVER_NAME'] . '/';
   //origen de la cuenta
-  $form['#user']->field_account_origin['und'][0]['value'] = $local;
+  $user->field_account_origin['und'][0]['value'] = $local;
   //Enviar formulario
   $slaves = _get_slaves();
   $master = _get_master();
+  //Send to master o slave
   if (_is_master()) {
     foreach($slaves as $slave) {
-      _post_curl($form, $slave . 'users_sync');
+      error_log('shoot to: ' . $slave);
+      _post_curl($user, $slave . 'users_sync');
     }
   } else {
-    _post_curl($form, $master . 'users_sync');
+    error_log('shoot to: ' . $master);
+    _post_curl($user, $master . 'users_sync');
   }
 }
 
@@ -146,34 +152,36 @@ function _map_user($post) {
   $user['status'] = 1;
   $user['pass'] = $post->password;
   foreach ($map as $index => $value) {
-    switch ($value) {
-      case 'direct':
-        $user[$index] = $post->{$index};
-        break;
-      case 'value': 
-        $user[$index] = array('und' => array(0 => array('value' => $post->{$index}['und'][0]['value'])));
-        break;
-      case 'tid':
-        //@todo add vocabulary
-        $term = taxonomy_get_term_by_name($post->{$index}['und'][0]['term']);
-        $term = current($term);
-        $user[$index] = array('und' => array(0 => array('tid' => $term->tid)));
-        break;
-      case 'multiple':
-        $multiple = $post->{$index}['und'];
-        foreach($multiple as $i => $value) {
+    if(isset($post->{$index})) {
+      switch ($value) {
+        case 'direct':
+          $user[$index] = $post->{$index};
+          break;
+        case 'value': 
+          $user[$index] = array('und' => array(0 => array('value' => $post->{$index}['und'][0]['value'])));
+          break;
+        case 'tid':
           //@todo add vocabulary
-          $term = taxonomy_get_term_by_name($post->{$index}['und'][$i]['term']); 
-          $term = current($term); 
-          $user[$index]['und'][$i]['tid'] = $term->tid;
-        }
+          $term = taxonomy_get_term_by_name($post->{$index}['und'][0]['term']);
+          $term = current($term);
+          $user[$index] = array('und' => array(0 => array('tid' => $term->tid)));
+          break;
+        case 'multiple':
+          $multiple = $post->{$index}['und'];
+          foreach($multiple as $i => $value) {
+            //@todo add vocabulary
+            $term = taxonomy_get_term_by_name($post->{$index}['und'][$i]['term']); 
+            $term = current($term); 
+            $user[$index]['und'][$i]['tid'] = $term->tid;
+          }
+          break;
+        case 'marketing':
+          $marketing = $post->{$index}['und'];  
+          foreach($marketing as $i =>  $permission) {
+            $user[$index]['und'][$i]['value'] = $post->{$index}['und'][$i]['value'];
+          }
         break;
-      case 'marketing':
-        $marketing = $post->{$index}['und'];
-        foreach($marketing as $i =>  $permission) {
-          $user[$index]['und'][$i]['value'] = $post->{$index}['und'][$i]['value'];
-        }
-        break;
+      }
     }
   }
   //complete user information
