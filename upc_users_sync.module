@@ -150,7 +150,6 @@ function _map_user($post) {
 
   $user['init'] = $post->mail;
   $user['status'] = 1;
-  $user['pass'] = $post->password;
   foreach ($map as $index => $value) {
     if(isset($post->{$index})) {
       switch ($value) {
@@ -199,7 +198,7 @@ function _user_fields(){
   return array(
     'name' => 'direct',
     'mail' => 'direct',
-    //'pass' => 'direct',
+    'pass' => 'direct',
     'timezone' => 'direct',
     'field_permission_marketing' => 'value',
     
