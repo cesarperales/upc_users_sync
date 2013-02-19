@@ -27,34 +27,40 @@ function upc_users_sync_menu() {
 }
 function _upc_users_sync_create() {
   $user = unserialize(bakery_decrypt($_POST['form']));
+  $form = $user; //to send to slaves
   $user = $user['#user'];
   $errors = array();
 
-  $account = user_load_by_mail($post->mail);
-  if ($account) {
-    $errors[] = 'mail';
-  }
-  else {
-    // Check username.
-    $account = user_load_by_name($post->name);
+  if (_is_master()){
+    // Check mail.
+    $account = user_load_by_mail($user->mail);
     if ($account) {
       $errors[] = 'mail';
     }
-  }
+    else {
+      // Check username.
+      $account = user_load_by_name($user->name);
+      if ($account) {
+        $errors[] = 'mail';
+      }
+    }
+  } 
+
   if(empty($errors)) {
     $new_account = _map_user($user);
-    /*error_log(print_r($user,1));
-      error_log('                ||  ');
-      error_log('                ||  ');
-      error_log('                ||  ');
-      error_log('                ||  ');
-      error_log('                \/  ');*/
     $account = user_save(NULL, $new_account);
-    //error_log(print_r($account,1));
+    
+    //if master and user  successfully created, send to slaves.
+    if (_is_master() && !empty($account->uid)) {
+      $slaves = _get_slaves();
+      foreach($slaves as $slave) {
+        _post_curl($form, $slave . 'users_sync');
+      }
+    }
     //inicia sesion
-    $init = _bakery_init_field($account->uid);
+    /*$init = _bakery_init_field($account->uid);
     _bakery_bake_chocolatechip_cookie($account->name, $account->mail, $init);
-    bakery_user_external_login($account);
+    bakery_user_external_login($account);*/
   } else {
     watchdog('user', 'upc_users_sync: %name cant be created, already exists a account with same !error.', array('%name' => $account->name, '!error' => $errors[0]), WATCHDOG_WARNING, l(t('edit'), 'user/'. $account->uid .'/edit'));
     return 'cuenta no creada';
@@ -67,7 +73,7 @@ function _upc_users_sync_create() {
  */
 function _user_register_submit($form, &$form_state) {
 
-  //send term name too
+  //send term name becouse they have different tid accross sites
   foreach ($form['#user'] as $index => $value) {
     if (is_array($form['#user']->{$index})) {
       if (isset($form['#user']->{$index}['und'][0]['tid'])) {
@@ -80,48 +86,30 @@ function _user_register_submit($form, &$form_state) {
     }
   }
 
-  $sites = array_merge(_get_slaves(), array(_get_master())); 
   $local = 'http://' .  $_SERVER['SERVER_NAME'] . '/';
-
+  //origen de la cuenta
   $form['#user']->field_account_origin['und'][0]['value'] = $local;
-
-  foreach($sites as $site) {
-    if($site != $local) {
-       error_log('shoot to : ' . $local);
-      _post_curl($form, $site . 'users_sync');
+  //Enviar formulario
+  $slaves = _get_slaves();
+  $master = _get_master();
+  if (_is_master()) {
+    foreach($slaves as $slave) {
+      _post_curl($form, $slave . 'users_sync');
     }
+  } else {
+    _post_curl($form, $master . 'users_sync');
   }
 }
 
-function _user_profile_form_submit() {}
 /**
  * Implementation of hook_form_alter
  * Triggers _user_check function when submitting the register form
  */
 function upc_users_sync_form_alter(&$form, $form_state, $form_id) {
   if ($form_id == 'user_register_form') {
-    $form['#submit'] = array();
     //overrides default and bakery submit functions
-    //default, graba en local
-    $form['#submit'][] = 'user_register_submit';  
-    //graba en los demas
+    $form['#submit'] = array();
     $form['#submit'][] = '_user_register_submit'; 
-  }
-  if($form_id == 'user_profile_form') {
-    //Agregamos o reemplazamos? 
-    //probemos redirigir a master y ahi editamos y luego regresamos
-    // $form['#submit'] = array();
-    //$form['#submit'][] = '_user_register_submit';  
-      //$form = array();
-      //$form_state = array();
-    if (!variable_get('bakery_is_master', 0) && !user_access('administer users')) {
-      $init_url = _bakery_init_field_url($form['#user']->init);
-      unset($form);
-      unset($form_state);
-      $form = array();
-      $form_state = array();
-
-    }
   }
 }
 
@@ -129,20 +117,19 @@ function _post_curl($form,  $url) {
   //cURL version
   $curl = curl_init();
   curl_setopt_array($curl, array(
-    CURLOPT_RETURNTRANSFER => 1,
     CURLOPT_URL => $url,
+    CURLOPT_RETURNTRANSFER => 1,
+    //CURLOPT_HTTPHEADER => array('Content-type: application/json') ,
     CURLOPT_POST => 1,
     CURLOPT_POSTFIELDS => array(
-        'url' => 'http://' . $_SERVER['SERVER_NAME'] ,
         'form' => bakery_encrypt(serialize($form)),
     ),
   ));
   $resp = curl_exec($curl);
   if (!$resp) {
-    drupal_set_message(t('Error %error for site at %url', array('%error' => curl_error($curl) .' '. curl_errno($curl), '%url' => $url)));
+    return json_decode(array('message' => 'Error ' . curl_errno($curl) . ' : ' .  curl_error($curl) )); 
   } else {
-    //drupal_set_message($resp);
-    drupal_set_message(t('Cuenta creada en %url', array('%url' => $url)));
+    return json_decode($resp);
   }
 }
 /**
@@ -251,26 +238,6 @@ function _user_fields(){
     //origen de la cuenta 
     'field_account_origin' => 'value',
   );
-}
-/**
- * Create or update User
- */
-function _user_create($uid = null){
-  if(!empty($uid)) {
-    //update user
-    $remote_user = _get_remote_user();
-    $user = user_load($uid);
-    //map information here
-
-    #user_save($user);
-    return $user->uid;
-  } else {
-    //create user
-    $remote_user = _get_remote_user();
-
-    #user_save($user);
-    return $user->uid;
-  }
 }
 /**
  * Slaves Sites
