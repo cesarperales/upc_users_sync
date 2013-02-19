@@ -158,7 +158,9 @@ function _map_user($post) {
           $user[$index] = $post->{$index};
           break;
         case 'value': 
-          $user[$index] = array('und' => array(0 => array('value' => $post->{$index}['und'][0]['value'])));
+          if($post->{$index}['und'][0]['value']) {
+            $user[$index] = array('und' => array(0 => array('value' => $post->{$index}['und'][0]['value'])));
+          }
           break;
         case 'tid':
           //@todo add vocabulary
