@@ -10,19 +10,6 @@ function upc_users_sync_menu() {
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
-  $items['users_sync/user_spread'] = array(
-    'title' => 'Spread Users',
-    'page callback' => '_user_spread',
-    'access callback' => TRUE,
-    'type' => MENU_CALLBACK,
-  );
-  $items['users_sync/user_test'] = array(
-    'title' => 'Test Users',
-    'page callback' => '_user_test',
-    'access callback' => TRUE,
-    'type' => MENU_CALLBACK,
-  );
-
   return $items;
 }
 function _upc_users_sync_create() {
@@ -30,8 +17,6 @@ function _upc_users_sync_create() {
   $user_copy = $user; //to send to slaves
   $errors = array();
 
-  error_log(print_r($user->mail,1));
-  error_log(print_r($user->name,1));
   if (_is_master()){
     // Check mail.
     $account = user_load_by_mail($user->mail);
@@ -74,6 +59,7 @@ function _upc_users_sync_create() {
  */
 function _user_register_submit($form, &$form_state) {
   $user = new stdClass();
+  $errors = array();
 
   $f = $form_state['values'];
   foreach($f as $index => $value) {
@@ -92,15 +78,41 @@ function _user_register_submit($form, &$form_state) {
   $local = 'http://' .  $_SERVER['SERVER_NAME'] . '/';
   //origen de la cuenta
   $user->field_account_origin['und'][0]['value'] = $local;
+
+  //Map user here avoids remapping
+  $user = _map_user($user);
+
   //Enviar formulario
   $slaves = _get_slaves();
   $master = _get_master();
-  //Send to master o slave
+
+  //If master save user, on success send info to slaves
+  //If slave just send info to master
   if (_is_master()) {
-    foreach($slaves as $slave) {
-      error_log('shoot to: ' . $slave);
-      _post_curl($user, $slave . 'users_sync');
+    // Check mail.
+    $account = user_load_by_mail($user->mail);
+    if ($account) {
+      $errors[] = 'mail';
     }
+    else {
+      // Check username.
+      $account = user_load_by_name($user->name);
+      if ($account) {
+        $errors[] = 'mail';
+      }
+    }
+    //if no errors save user
+    if(empty($errors)) {
+      $account = user_save(NULL, $new_account);
+      //if user save success, send info to slaves
+      if(!empty($account->uid )) {
+        foreach($slaves as $slave) {
+          error_log('shoot to: ' . $slave);
+          _post_curl($user, $slave . 'users_sync');
+        }
+      }
+    }
+
   } else {
     error_log('shoot to: ' . $master);
     _post_curl($user, $master . 'users_sync');
