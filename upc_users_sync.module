@@ -33,7 +33,6 @@ function _upc_users_sync_create() {
   } 
 
   if(empty($errors)) {
-    $new_account = _map_user($user);
     $account = user_save(NULL, $new_account);
     
     //if master and user  successfully created, send to slaves.
