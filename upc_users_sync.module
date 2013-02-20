@@ -14,7 +14,6 @@ function upc_users_sync_menu() {
 }
 function _upc_users_sync_create() {
   $user = unserialize(bakery_decrypt($_POST['form']));
-  $user_copy = $user; //to send to slaves
   $errors = array();
 
   if (_is_master()){
@@ -33,13 +32,13 @@ function _upc_users_sync_create() {
   } 
 
   if(empty($errors)) {
-    $account = user_save(NULL, $new_account);
+    $account = user_save(NULL, $user);
     
     //if master and user  successfully created, send to slaves.
     if (_is_master() && !empty($account->uid)) {
       $slaves = _get_slaves();
       foreach($slaves as $slave) {
-        _post_curl($user_copy, $slave . 'users_sync');
+        _post_curl($user, $slave . 'users_sync');
       }
     }
     //inicia sesion
@@ -79,7 +78,7 @@ function _user_register_submit($form, &$form_state) {
   $user->field_account_origin['und'][0]['value'] = $local;
 
   //Map user here avoids remapping
-  $user = _map_user($user);
+  $new_account = _map_user($user);
 
   //Enviar formulario
   $slaves = _get_slaves();
@@ -89,13 +88,13 @@ function _user_register_submit($form, &$form_state) {
   //If slave just send info to master
   if (_is_master()) {
     // Check mail.
-    $account = user_load_by_mail($user->mail);
+    $account = user_load_by_mail($new_account->mail);
     if ($account) {
       $errors[] = 'mail';
     }
     else {
       // Check username.
-      $account = user_load_by_name($user->name);
+      $account = user_load_by_name($new_account->name);
       if ($account) {
         $errors[] = 'mail';
       }
@@ -107,14 +106,14 @@ function _user_register_submit($form, &$form_state) {
       if(!empty($account->uid )) {
         foreach($slaves as $slave) {
           error_log('shoot to: ' . $slave);
-          _post_curl($user, $slave . 'users_sync');
+          _post_curl($new_account, $slave . 'users_sync');
         }
       }
     }
 
   } else {
     error_log('shoot to: ' . $master);
-    _post_curl($user, $master . 'users_sync');
+    _post_curl($new_account, $master . 'users_sync');
   }
 }
 
