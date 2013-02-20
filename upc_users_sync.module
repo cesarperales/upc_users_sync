@@ -10,6 +10,13 @@ function upc_users_sync_menu() {
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
+  $items['users_sync/edit'] = array(
+    'title' => 'Editar cuenta',
+    'page callback' => '_upc_users_sync_edit',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
   return $items;
 }
 function _upc_users_sync_create() {
@@ -52,7 +59,54 @@ function _upc_users_sync_create() {
   }
   return drupal_json_output(array('message' => 1)); // 1 = cuenta creada exitosamente
 }
+/**
+ * Edicion de usuarios
+ */
+function _upc_users_sync_edit(){
+  $edit = unserialize(bakery_decrypt($_POST['form']));
+  $post = $edit;
+  $errors = array();
+  
+  if(_is_master()) {
+    //buscamos usuario
+    $account = user_load_by_mail($edit['mail']); 
+    if(!$account) {
+      $account = user_load_by_name($edit['name']);
+    }
+    if ($account){
+      unset($edit['init']);
+      unset($edit['name']);
+      unset($edit['mail']);
+      unset($edit['pass']);
 
+      //tratamos de grabar 
+      $save = user_save($account, $edit);
+      if (!empty($save->uid)) {
+        foreach($slaves as $slave) {
+          error_log('shoot to: ' . $slave);
+          _post_curl($post, $slave . 'users_sync/edit');
+        }
+      }
+    }
+  } else {
+    $account = user_load_by_mail($edit['mail']); 
+    if(!$account) {
+      $account = user_load_by_name($edit['name']);
+    }
+    if ($account){
+      unset($edit['init']);
+      unset($edit['name']);
+      unset($edit['mail']);
+      unset($edit['pass']);
+
+      //tratamos de grabar 
+      $save = user_save($account, $edit);
+    } else {
+      //si no existe la cuenta la creamos?
+      //user_save('', $edit);
+    }
+  }
+}
 /**
  * Send user information to all sites.
  */
@@ -121,7 +175,65 @@ function _user_register_submit($form, &$form_state) {
     _post_curl($new_account, $master . 'users_sync');
   }
 }
+/**
+ * Edit user information
+ */ 
+function _user_profile_submit($form, &$form_state) {
+  $user = new stdClass();
+  $errors = array();
+  $f = $form_state['values'];
+  foreach($f as $index => $value) {
+    $user->{$index} = $value;
+    if (is_array($f[$index])) {
+      if (isset($f[$index]['und'][0]['tid'])) {
+        foreach ($f[$index]['und'] as $i => $a) {
+          $term = taxonomy_term_load($f[$index]['und'][$i]['tid']);
+          $term = $term->name;
+          $user->{$index}['und'][$i]['term'] = $term;
+        }
+      }
+    }
+  }
 
+  $local = 'http://' .  $_SERVER['SERVER_NAME'] . '/';
+  //origen de la cuenta
+  $user->field_account_origin['und'][0]['value'] = $local;
+
+  //Map user here avoids remapping
+  $edit = _map_user($user);
+  $post = $edit;
+
+  //Enviar formulario
+  $slaves = _get_slaves();
+  $master = _get_master();
+
+  if(_is_master()) {
+    //buscamos usuario
+    $account = user_load_by_mail($edit['mail']); 
+    if(!$account) {
+      $account = user_load_by_name($edit['name']);
+    }
+    if ($account){
+      unset($edit['init']);
+      unset($edit['name']);
+      unset($edit['mail']);
+      unset($edit['pass']);
+
+      //tratamos de grabar 
+      $save = user_save($account, $edit);
+      if (!empty($save->uid)) {
+        foreach($slaves as $slave) {
+          error_log('shoot to: ' . $slave);
+          _post_curl($post, $slave . 'users_sync/edit');
+        }
+      }
+    } 
+  } else {
+    //mandamos a master
+    error_log('shoot to: ' . $master);
+    _post_curl($post, $master . 'users_sync/edit');
+  }
+}
 /**
  * Implementation of hook_form_alter
  * Triggers _user_check function when submitting the register form
@@ -131,6 +243,10 @@ function upc_users_sync_form_alter(&$form, $form_state, $form_id) {
     //overrides default and bakery submit functions
     $form['#submit'] = array();
     $form['#submit'][] = '_user_register_submit'; 
+  }
+  if ($form_id == 'user_profile_form') {
+    $form['#submit'] = array();
+    $form['#submit'][] = '_user_profile_submit';
   }
 }
 
@@ -147,8 +263,11 @@ function _post_curl($form,  $url) {
     ),
   ));
   $resp = curl_exec($curl);
+  error_log(print_r($resp,1));
+  curl_close($curl);
   if (!$resp) {
-    return json_decode(array('message' => 'Error ' . curl_errno($curl) . ' : ' .  curl_error($curl) )); 
+    error_log('Error ' . curl_errno($curl) . ' : ' .  curl_error($curl)); 
+    return array('message' => 'Error ' . curl_errno($curl) . ' : ' .  curl_error($curl) ); 
   } else {
     error_log(print_r($resp,1));
     return json_decode($resp);
