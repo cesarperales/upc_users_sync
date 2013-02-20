@@ -66,6 +66,9 @@ function _upc_users_sync_edit(){
   $edit = unserialize(bakery_decrypt($_POST['form']));
   $post = $edit;
   $errors = array();
+
+  $slaves = _get_slaves();
+  $master = _get_master();
   
   if(_is_master()) {
     //buscamos usuario
@@ -82,6 +85,7 @@ function _upc_users_sync_edit(){
       //tratamos de grabar 
       $save = user_save($account, $edit);
       if (!empty($save->uid)) {
+        //mandamos a esclavos
         foreach($slaves as $slave) {
           error_log('shoot to: ' . $slave);
           _post_curl($post, $slave . 'users_sync/edit');
@@ -263,8 +267,7 @@ function _post_curl($form,  $url) {
     ),
   ));
   $resp = curl_exec($curl);
-  error_log(print_r($resp,1));
-  curl_close($curl);
+  //curl_close($curl);
   if (!$resp) {
     error_log('Error ' . curl_errno($curl) . ' : ' .  curl_error($curl)); 
     return array('message' => 'Error ' . curl_errno($curl) . ' : ' .  curl_error($curl) ); 
