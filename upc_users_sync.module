@@ -48,9 +48,9 @@ function _upc_users_sync_create() {
     bakery_user_external_login($account);
   } else {
     watchdog('user', 'upc_users_sync: %name cant be created, already exists a account with same !error.', array('%name' => $account->name, '!error' => $errors[0]), WATCHDOG_WARNING, l(t('edit'), 'user/'. $account->uid .'/edit'));
-    return 'cuenta no creada';
+    return drupal_json_output(array('message' => 2)); // 2 = ya existe una cuenta con el mismo mail o nombre
   }
-  return 'cuenta creada';
+  return drupal_json_output(array('message' => 1)); // 1 = cuenta creada exitosamente
 }
 
 /**
@@ -150,6 +150,7 @@ function _post_curl($form,  $url) {
   if (!$resp) {
     return json_decode(array('message' => 'Error ' . curl_errno($curl) . ' : ' .  curl_error($curl) )); 
   } else {
+    error_log(print_r($resp,1));
     return json_decode($resp);
   }
 }
