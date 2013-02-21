@@ -332,10 +332,12 @@ function _translate_terms($user) {
   $map = _user_fields();
   foreach ($map as $key => $value) {
     if($value == 'tid') {
-      $term = taxonomy_get_term_by_name($user[$key]['und'][0]['term']);
-      $term = current($term);
-      $user[$key]['und'][0]['tid'] = $term->tid;
-      $user[$key]['und'][0]['term'] = $term->name;
+      foreach($user[$key]['und'] as $i => $a) {
+        $term = taxonomy_get_term_by_name($user[$key]['und'][$i]['term']);
+        $term = current($term);
+        $user[$key]['und'][$i]['tid'] = $term->tid;
+        $user[$key]['und'][$i]['term'] = $term->name;
+      }
     } 
   }
   return $user;
