@@ -39,7 +39,7 @@ function _upc_users_sync_create() {
   } 
 
   if(empty($errors)) {
-    $edit = _tramslate_terms($edit);
+    $edit = _translate_terms($edit);
     $account = user_save(NULL, $user);
     
     //if master and user  successfully created, send to slaves.
@@ -65,6 +65,7 @@ function _upc_users_sync_create() {
  */
 function _upc_users_sync_edit(){
   $edit = unserialize(bakery_decrypt($_POST['form']));
+  $edit = _translate_terms($edit);
   $post = $edit;
   $errors = array();
 
@@ -83,7 +84,6 @@ function _upc_users_sync_edit(){
       unset($edit['mail']);
       unset($edit['pass']);
       
-      $edit = _tramslate_terms($edit);
       
       //tratamos de grabar 
       $save = user_save($account, $edit);
@@ -315,6 +315,7 @@ function _map_user($post) {
                 $term = taxonomy_term_load($post->{$index}['und'][$i]['tid']);
                 $term = $term->name;
                 $user[$index]['und'][$i]['term'] = $term;
+                $user[$index]['und'][$i]['tid'] = $term->tid;
               }
             }
           }
@@ -355,7 +356,11 @@ function _translate_terms($user) {
   $map = _user_fields();
   foreach ($map as $key => $value) {
     if($value == 'tid') {
-      error_log(print_r($user[$index],1));
+      $term = taxonomy_get_term_by_name($user[$key]['und'][0]['term']);
+      $term = current($term);
+      $user[$key]['und'][0]['tid'] = $term->tid;
+      $user[$key]['und'][0]['term'] = $term->name;
+      error_log(print_r($user[$key],1));
     } 
   }
   return $user;
