@@ -323,14 +323,16 @@ function _translate_terms($user) {
   foreach ($map as $key => $value) {
     if($value == 'tid') {
       foreach($user[$key]['und'] as $i => $a) {
-        $term = taxonomy_get_term_by_name($user[$key]['und'][$i]['term'], $user[$key]['und'][$i]['vid']);
-        $term = current($term);
-        $user[$key]['und'][$i] = array(
-            'term' => $term->name,
-            'tid' => $term->tid,
-            'vid' => $term->vocabulary_machine_name,
-            );
-        error_log($term->vocabulary_machine_name . ' ' . $term->tid . ' ' . $term->name);
+        $terms = taxonomy_get_term_by_name($user[$key]['und'][$i]['term'], $user[$key]['und'][$i]['vid']);
+        foreach($terms as $term) {
+          if($term->vocabulary_machine_name == $user[$key]['und'][$i]['vid']) {
+            $user[$key]['und'][$i] = array(
+                'term' => $term->name,
+                'tid' => $term->tid,
+                'vid' => $term->vocabulary_machine_name,
+                );
+          }
+        }
       }
     } 
   }
