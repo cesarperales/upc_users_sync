@@ -124,18 +124,6 @@ function _user_register_submit($form, &$form_state) {
   $f = $form_state['values'];
   foreach($f as $index => $value) {
     $user->{$index} = $value;
-    //this should be in _map_user
-    /*
-    if (is_array($f[$index])) {
-      if (isset($f[$index]['und'][0]['tid'])) {
-        foreach ($f[$index]['und'] as $i => $a) {
-          $term = taxonomy_term_load($f[$index]['und'][$i]['tid']);
-          $term = $term->name;
-          $user->{$index}['und'][$i]['term'] = $term;
-        } 
-      }
-    }
-    */
   }
 
   $local = 'http://' .  $_SERVER['SERVER_NAME'] . '/';
@@ -194,17 +182,6 @@ function _user_profile_submit($form, &$form_state) {
   $f = $form_state['values'];
   foreach($f as $index => $value) {
     $user->{$index} = $value;
-    //this is moved to map_user
-    /*
-    if (is_array($f[$index])) {
-      if (isset($f[$index]['und'][0]['tid'])) {
-        foreach ($f[$index]['und'] as $i => $a) {
-          $term = taxonomy_term_load($f[$index]['und'][$i]['tid']);
-          $term = $term->name;
-          $user->{$index}['und'][$i]['term'] = $term;
-        }
-      }
-    }*/
   }
 
   $local = 'http://' .  $_SERVER['SERVER_NAME'] . '/';
@@ -313,8 +290,7 @@ function _map_user($post) {
             if (isset($post->{$index}['und'][0]['tid'])) {
               foreach ($post->{$index}['und'] as $i => $a) {
                 $term = taxonomy_term_load($post->{$index}['und'][$i]['tid']);
-                $term = $term->name;
-                $user[$index]['und'][$i]['term'] = $term;
+                $user[$index]['und'][$i]['term'] = $term->name;
                 $user[$index]['und'][$i]['tid'] = $term->tid;
               }
             }
@@ -325,15 +301,15 @@ function _map_user($post) {
           $term = current($term);
           $user[$index] = array('und' => array(0 => array('tid' => $term->tid)));*/
           break;
-        case 'multiple':
+        /*case 'multiple':
           $multiple = $post->{$index}['und'];
           foreach($multiple as $i => $value) {
             //@todo add vocabulary
-            $term = taxonomy_get_term_by_name($post->{$index}['und'][$i]['term']); 
-            $term = current($term); 
+            $term = taxonomy_term_load($post->{$index}['und'][$i]['tid']);
+            $user[$index]['und'][$i]['term'] = $term->name;
             $user[$index]['und'][$i]['tid'] = $term->tid;
           }
-          break;
+          break;*/
         case 'marketing':
           $marketing = $post->{$index}['und'];  
           foreach($marketing as $i =>  $permission) {
@@ -360,7 +336,6 @@ function _translate_terms($user) {
       $term = current($term);
       $user[$key]['und'][0]['tid'] = $term->tid;
       $user[$key]['und'][0]['term'] = $term->name;
-      error_log(print_r($user[$key],1));
     } 
   }
   return $user;
@@ -410,7 +385,7 @@ function _user_fields(){
     'field_user_nationality' => 'value',
     'field_user_phone' => 'value',
     'field_user_sex' => 'value',
-    'field_user_interest_area_term' => 'multiple',
+    'field_user_interest_area_term' => 'tid',
 
     'field_user_nick' => 'value',
     'field_user_business_code' => 'value',
