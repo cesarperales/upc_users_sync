@@ -295,21 +295,7 @@ function _map_user($post) {
               }
             }
           }
-          
-          //@todo add vocabulary
-          /*$term = taxonomy_get_term_by_name($post->{$index}['und'][0]['term']);
-          $term = current($term);
-          $user[$index] = array('und' => array(0 => array('tid' => $term->tid)));*/
           break;
-        /*case 'multiple':
-          $multiple = $post->{$index}['und'];
-          foreach($multiple as $i => $value) {
-            //@todo add vocabulary
-            $term = taxonomy_term_load($post->{$index}['und'][$i]['tid']);
-            $user[$index]['und'][$i]['term'] = $term->name;
-            $user[$index]['und'][$i]['tid'] = $term->tid;
-          }
-          break;*/
         case 'marketing':
           $marketing = $post->{$index}['und'];  
           foreach($marketing as $i =>  $permission) {
