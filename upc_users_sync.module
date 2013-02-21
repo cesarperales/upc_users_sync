@@ -39,6 +39,7 @@ function _upc_users_sync_create() {
   } 
 
   if(empty($errors)) {
+    $edit = _tramslate_terms($edit);
     $account = user_save(NULL, $user);
     
     //if master and user  successfully created, send to slaves.
@@ -81,7 +82,9 @@ function _upc_users_sync_edit(){
       unset($edit['name']);
       unset($edit['mail']);
       unset($edit['pass']);
-
+      
+      $edit = _tramslate_terms($edit);
+      
       //tratamos de grabar 
       $save = user_save($account, $edit);
       if (!empty($save->uid)) {
@@ -121,6 +124,8 @@ function _user_register_submit($form, &$form_state) {
   $f = $form_state['values'];
   foreach($f as $index => $value) {
     $user->{$index} = $value;
+    //this should be in _map_user
+    /*
     if (is_array($f[$index])) {
       if (isset($f[$index]['und'][0]['tid'])) {
         foreach ($f[$index]['und'] as $i => $a) {
@@ -130,6 +135,7 @@ function _user_register_submit($form, &$form_state) {
         } 
       }
     }
+    */
   }
 
   $local = 'http://' .  $_SERVER['SERVER_NAME'] . '/';
@@ -188,6 +194,8 @@ function _user_profile_submit($form, &$form_state) {
   $f = $form_state['values'];
   foreach($f as $index => $value) {
     $user->{$index} = $value;
+    //this is moved to map_user
+    /*
     if (is_array($f[$index])) {
       if (isset($f[$index]['und'][0]['tid'])) {
         foreach ($f[$index]['und'] as $i => $a) {
@@ -196,7 +204,7 @@ function _user_profile_submit($form, &$form_state) {
           $user->{$index}['und'][$i]['term'] = $term;
         }
       }
-    }
+    }*/
   }
 
   $local = 'http://' .  $_SERVER['SERVER_NAME'] . '/';
@@ -280,6 +288,7 @@ function _post_curl($form,  $url) {
  * Create User Array
  * Collect information from post and create an user array
  * to be use in user_save function
+ * @param Object $post
  * @return array $user
  */
 function _map_user($post) {
@@ -300,10 +309,20 @@ function _map_user($post) {
           }
           break;
         case 'tid':
+          if (is_array($post->{$index})) {
+            if (isset($post->{$index}['und'][0]['tid'])) {
+              foreach ($post->{$index}['und'] as $i => $a) {
+                $term = taxonomy_term_load($post->{$index}['und'][$i]['tid']);
+                $term = $term->name;
+                $user[$index]['und'][$i]['term'] = $term;
+              }
+            }
+          }
+          
           //@todo add vocabulary
-          $term = taxonomy_get_term_by_name($post->{$index}['und'][0]['term']);
+          /*$term = taxonomy_get_term_by_name($post->{$index}['und'][0]['term']);
           $term = current($term);
-          $user[$index] = array('und' => array(0 => array('tid' => $term->tid)));
+          $user[$index] = array('und' => array(0 => array('tid' => $term->tid)));*/
           break;
         case 'multiple':
           $multiple = $post->{$index}['und'];
@@ -327,6 +346,18 @@ function _map_user($post) {
   /*if(!empty($userinfo['authname_bakery'])) {
     $user['authname_bakery'] = $userinfo['authname_bakery'];
   }*/
+  return $user;
+}
+/**
+ * Transform taxonomy term names in tid
+ */
+function _translate_terms($user) {
+  $map = _user_fields();
+  foreach ($map as $key => $value) {
+    if($value == 'tid') {
+      error_log(print_r($user[$index],1));
+    } 
+  }
   return $user;
 }
 /**
