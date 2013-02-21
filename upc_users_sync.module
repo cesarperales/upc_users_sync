@@ -294,8 +294,7 @@ function _map_user($post) {
                     'term' => $term->name,
                     'tid' => $term->tid,
                     'vid' => $term->vocabulary_machine_name,
-                  );
-                error_log($term->vocabulary_machine_name . ' ' . $term->tid . ' ' . $term->name);
+                    );
               }
             }
           }
