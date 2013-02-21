@@ -53,7 +53,7 @@ function _upc_users_sync_create() {
     error_log('inicia sesion create');
     $init = _bakery_init_field($account->uid);
     _bakery_bake_chocolatechip_cookie($account->name, $account->mail, $init);
-    bakery_user_external_login($account)
+    bakery_user_external_login($account);
   } else {
     watchdog('user', 'upc_users_sync: %name cant be created, already exists a account with same !error.', array('%name' => $account->name, '!error' => $errors[0]), WATCHDOG_WARNING, l(t('edit'), 'user/'. $account->uid .'/edit'));
     return drupal_json_output(array('message' => 2)); // 2 = ya existe una cuenta con el mismo mail o nombre
@@ -225,6 +225,8 @@ function _user_profile_submit($form, &$form_state) {
  */
 function upc_users_sync_form_alter(&$form, $form_state, $form_id) {
   if ($form_id == 'user_register_form') {
+    $form['account']['name']['#type'] = 'textfield';
+    unset($form['account']['name']['#value']);
     //overrides default and bakery submit functions
     $form['field_account_origin']['und'][0]['#access'] = FALSE;
     $form['#submit'] = array();
