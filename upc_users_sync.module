@@ -184,10 +184,6 @@ function _user_profile_submit($form, &$form_state) {
     $user->{$index} = $value;
   }
 
-  $local = 'http://' .  $_SERVER['SERVER_NAME'] . '/';
-  //origen de la cuenta
-  $user->field_account_origin['und'][0]['value'] = $local;
-
   //Map user here avoids remapping
   $edit = _map_user($user);
   $post = $edit;
@@ -230,10 +226,13 @@ function _user_profile_submit($form, &$form_state) {
 function upc_users_sync_form_alter(&$form, $form_state, $form_id) {
   if ($form_id == 'user_register_form') {
     //overrides default and bakery submit functions
+    $form['field_account_origin']['und'][0]['#access'] = FALSE;
     $form['#submit'] = array();
     $form['#submit'][] = '_user_register_submit'; 
   }
   if ($form_id == 'user_profile_form') {
+    //overrides default and bakery submit functions
+    $form['field_account_origin']['und'][0]['#access'] = FALSE;
     $form['#submit'] = array();
     $form['#submit'][] = '_user_profile_submit';
   }
