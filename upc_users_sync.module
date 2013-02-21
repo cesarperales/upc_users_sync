@@ -50,7 +50,6 @@ function _upc_users_sync_create() {
       }
     }
     //inicia sesiono
-    error_log('inicia sesion create');
     $init = _bakery_init_field($account->uid);
     _bakery_bake_chocolatechip_cookie($account->name, $account->mail, $init);
     bakery_user_external_login($account);
@@ -90,7 +89,6 @@ function _upc_users_sync_edit(){
       if (!empty($save->uid)) {
         //mandamos a esclavos
         foreach($slaves as $slave) {
-          error_log('shoot to: ' . $slave);
           _post_curl($post, $slave . 'users_sync/edit');
         }
       }
@@ -158,18 +156,15 @@ function _user_register_submit($form, &$form_state) {
       //if user save success, send info to slaves
       if(!empty($account->uid )) {
         foreach($slaves as $slave) {
-          error_log('shoot to: ' . $slave);
           _post_curl($new_account, $slave . 'users_sync');
         }
       }
-      error_log('inicia sesion submit');
       $init = _bakery_init_field($account->uid);
       _bakery_bake_chocolatechip_cookie($account->name, $account->mail, $init);
       bakery_user_external_login($account);
     }
 
   } else {
-    error_log('shoot to: ' . $master);
     _post_curl($new_account, $master . 'users_sync');
   }
 }
@@ -208,14 +203,12 @@ function _user_profile_submit($form, &$form_state) {
       $save = user_save($account, $edit);
       if (!empty($save->uid)) {
         foreach($slaves as $slave) {
-          error_log('shoot to: ' . $slave);
           _post_curl($post, $slave . 'users_sync/edit');
         }
       }
     } 
   } else {
     //mandamos a master
-    error_log('shoot to: ' . $master);
     _post_curl($post, $master . 'users_sync/edit');
   }
 }
@@ -255,10 +248,8 @@ function _post_curl($form,  $url) {
   $resp = curl_exec($curl);
   //curl_close($curl);
   if (!$resp) {
-    error_log('Error ' . curl_errno($curl) . ' : ' .  curl_error($curl)); 
     return array('message' => 'Error ' . curl_errno($curl) . ' : ' .  curl_error($curl) ); 
   } else {
-    error_log(print_r($resp,1));
     return json_decode($resp);
   }
 }
