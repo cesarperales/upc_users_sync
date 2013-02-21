@@ -290,8 +290,12 @@ function _map_user($post) {
             if (isset($post->{$index}['und'][0]['tid'])) {
               foreach ($post->{$index}['und'] as $i => $a) {
                 $term = taxonomy_term_load($post->{$index}['und'][$i]['tid']);
-                $user[$index]['und'][$i]['term'] = $term->name;
-                $user[$index]['und'][$i]['tid'] = $term->tid;
+                $user[$index]['und'][$i] = array(
+                    'term' => $term->name,
+                    'tid' => $term->tid,
+                    'vid' => $term->vocabulary_machine_name,
+                  );
+                error_log($term->vocabulary_machine_name . ' ' . $term->tid . ' ' . $term->name);
               }
             }
           }
@@ -319,10 +323,14 @@ function _translate_terms($user) {
   foreach ($map as $key => $value) {
     if($value == 'tid') {
       foreach($user[$key]['und'] as $i => $a) {
-        $term = taxonomy_get_term_by_name($user[$key]['und'][$i]['term']);
+        $term = taxonomy_get_term_by_name($user[$key]['und'][$i]['term'], $user[$key]['und'][$i]['vid']);
         $term = current($term);
-        $user[$key]['und'][$i]['tid'] = $term->tid;
-        $user[$key]['und'][$i]['term'] = $term->name;
+        $user[$key]['und'][$i] = array(
+            'term' => $term->name,
+            'tid' => $term->tid,
+            'vid' => $term->vocabulary_machine_name,
+            );
+        error_log($term->vocabulary_machine_name . ' ' . $term->tid . ' ' . $term->name);
       }
     } 
   }
