@@ -1,17 +1,26 @@
 <?php 
+/** 
+ * This module let share user information (additional fields) between master and 
+ * slaves sites using curl (post) and several bakery functions.
+ * All fields are hardcoded, so you have to erase them and add yours.
+ * Theres a mapping function with rules on how to create the information to 
+ * share, its pretty ease to understand.
+ * @Author Cesar Perales
+ * @mail cesar.perales@gmail.com
+ */
 /**
- * implementation of Hook_menu
+ * Implementation of Hook_menu
  */
 function upc_users_sync_menu() {
   $items = array();
   $items['users_sync'] = array(
-    'title' => 'Crear cuenta',
+    'title' => 'Create Account',
     'page callback' => '_upc_users_sync_create',
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
   $items['users_sync/edit'] = array(
-    'title' => 'Editar cuenta',
+    'title' => 'Edit Account',
     'page callback' => '_upc_users_sync_edit',
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
@@ -49,18 +58,18 @@ function _upc_users_sync_create() {
         _post_curl($user, $slave . 'users_sync');
       }
     }
-    //inicia sesiono
+    //start session
     $init = _bakery_init_field($account->uid);
     _bakery_bake_chocolatechip_cookie($account->name, $account->mail, $init);
     bakery_user_external_login($account);
   } else {
     watchdog('user', 'upc_users_sync: %name cant be created, already exists a account with same !error.', array('%name' => $account->name, '!error' => $errors[0]), WATCHDOG_WARNING, l(t('edit'), 'user/'. $account->uid .'/edit'));
-    return drupal_json_output(array('message' => 2)); // 2 = ya existe una cuenta con el mismo mail o nombre
+    return drupal_json_output(array('message' => 2)); // 2 = Account already exists
   }
-  return drupal_json_output(array('message' => 1)); // 1 = cuenta creada exitosamente
+  return drupal_json_output(array('message' => 1)); // 1 = Account created
 }
 /**
- * Edicion de usuarios
+ * Edit users
  */
 function _upc_users_sync_edit(){
   $edit = unserialize(bakery_decrypt($_POST['form']));
@@ -72,7 +81,7 @@ function _upc_users_sync_edit(){
   $master = _get_master();
   
   if(_is_master()) {
-    //buscamos usuario
+    //search users
     $account = user_load_by_mail($edit['mail']); 
     if(!$account) {
       $account = user_load_by_name($edit['name']);
@@ -84,10 +93,10 @@ function _upc_users_sync_edit(){
       unset($edit['pass']);
       
       
-      //tratamos de grabar 
-      $save = user_save($account, $edit);
+      //lets try to save
+      save = user_save($account, $edit);
       if (!empty($save->uid)) {
-        //mandamos a esclavos
+        //send to slave
         foreach($slaves as $slave) {
           _post_curl($post, $slave . 'users_sync/edit');
         }
@@ -104,10 +113,10 @@ function _upc_users_sync_edit(){
       unset($edit['mail']);
       unset($edit['pass']);
 
-      //tratamos de grabar 
+      //try to save
       $save = user_save($account, $edit);
     } else {
-      //si no existe la cuenta la creamos?
+      //do we create it if doesn't exist?
       //user_save('', $edit);
     }
   }
@@ -125,13 +134,13 @@ function _user_register_submit($form, &$form_state) {
   }
 
   $local = 'http://' .  $_SERVER['SERVER_NAME'] . '/';
-  //origen de la cuenta
+  //account origin
   $user->field_account_origin['und'][0]['value'] = $local;
 
   //Map user here avoids remapping
   $new_account = _map_user($user);
 
-  //Enviar formulario
+  //send form
   $slaves = _get_slaves();
   $master = _get_master();
 
@@ -183,12 +192,12 @@ function _user_profile_submit($form, &$form_state) {
   $edit = _map_user($user);
   $post = $edit;
 
-  //Enviar formulario
+  //send form
   $slaves = _get_slaves();
   $master = _get_master();
 
   if(_is_master()) {
-    //buscamos usuario
+    //search user
     $account = user_load_by_mail($edit['mail']); 
     if(!$account) {
       $account = user_load_by_name($edit['name']);
@@ -199,7 +208,7 @@ function _user_profile_submit($form, &$form_state) {
       unset($edit['mail']);
       unset($edit['pass']);
 
-      //tratamos de grabar 
+      //try to save
       $save = user_save($account, $edit);
       if (!empty($save->uid)) {
         foreach($slaves as $slave) {
@@ -208,7 +217,7 @@ function _user_profile_submit($form, &$form_state) {
       }
     } 
   } else {
-    //mandamos a master
+    //send to master
     _post_curl($post, $master . 'users_sync/edit');
   }
 }
@@ -382,7 +391,7 @@ function _user_fields(){
     'field_user_business_hq_name' => 'value',
     'field_user_socrates_code' => 'value',
     'field_reusable_observation' => 'value',
-    //origen de la cuenta 
+    //account origin
     'field_account_origin' => 'value',
   );
 }
