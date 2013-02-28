@@ -28,6 +28,9 @@ function upc_users_sync_menu() {
 
   return $items;
 }
+/**
+ *  Create Users
+ */
 function _upc_users_sync_create() {
   $user = unserialize(bakery_decrypt($_POST['form']));
   $errors = array();
@@ -48,8 +51,8 @@ function _upc_users_sync_create() {
   } 
 
   if(empty($errors)) {
-    $edit = _translate_terms($edit);
-    $account = user_save(NULL, $user);
+    $new_account = _translate_terms($user);
+    $account = user_save(NULL, $new_account);
     
     //if master and user  successfully created, send to slaves.
     if (_is_master() && !empty($account->uid)) {
@@ -282,7 +285,7 @@ function _map_user($post) {
           $user[$index] = $post->{$index};
           break;
         case 'value': 
-          if($post->{$index}['und'][0]['value']) {
+          if(!empty($post->{$index}['und'][0]['value'])) {
             $user[$index] = array('und' => array(0 => array('value' => $post->{$index}['und'][0]['value'])));
           }
           break;
