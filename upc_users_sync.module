@@ -34,13 +34,13 @@ function _upc_users_sync_create() {
 
   if (_is_master()){
     // Check mail.
-    $account = user_load_by_mail($user->mail);
+    $account = user_load_by_mail($user['mail']);
     if ($account) {
       $errors[] = 'mail';
     }
     else {
       // Check username.
-      $account = user_load_by_name($user->name);
+      $account = user_load_by_name($user['name']);
       if ($account) {
         $errors[] = 'mail';
       }
@@ -148,13 +148,13 @@ function _user_register_submit($form, &$form_state) {
   //If slave just send info to master
   if (_is_master()) {
     // Check mail.
-    $account = user_load_by_mail($new_account->mail);
+    $account = user_load_by_mail($new_account['mail']);
     if ($account) {
       $errors[] = 'mail';
     }
     else {
       // Check username.
-      $account = user_load_by_name($new_account->name);
+      $account = user_load_by_name($new_account['name']);
       if ($account) {
         $errors[] = 'mail';
       }
