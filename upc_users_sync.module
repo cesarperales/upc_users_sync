@@ -94,7 +94,7 @@ function _upc_users_sync_edit(){
       
       
       //lets try to save
-      save = user_save($account, $edit);
+      $save = user_save($account, $edit);
       if (!empty($save->uid)) {
         //send to slave
         foreach($slaves as $slave) {
