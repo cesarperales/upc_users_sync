@@ -182,7 +182,7 @@ function _user_register_submit($form, &$form_state) {
     }
 
   } else {
-    error_log('send to : ' . $master)
+    error_log('send to : ' . $master);
     _post_curl($new_account, $master . 'users_sync');
   }
 }
@@ -221,14 +221,14 @@ function _user_profile_submit($form, &$form_state) {
       $save = user_save($account, $edit);
       if (!empty($save->uid)) {
         foreach($slaves as $slave) {
-          error_log('send to : ' . $slave)
+          error_log('send to : ' . $slave);
           _post_curl($post, $slave . 'users_sync/edit');
         }
       }
     } 
   } else {
     //send to master
-    error_log('send to : ' . $master)
+    error_log('send to : ' . $master);
     _post_curl($post, $master . 'users_sync/edit');
   }
 }
