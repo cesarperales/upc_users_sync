@@ -33,6 +33,7 @@ function upc_users_sync_menu() {
  */
 function _upc_users_sync_create() {
   $user = unserialize(base64_decode(bakery_decrypt($_POST['form'])));
+  error_log(print_r($user,1));
   $errors = array();
 
   if (_is_master()){
@@ -58,6 +59,7 @@ function _upc_users_sync_create() {
     if (_is_master() && !empty($account->uid)) {
       $slaves = _get_slaves();
       foreach($slaves as $slave) {
+        error_log('send to : ' . $slave);
         _post_curl($user, $slave . 'users_sync');
       }
     }
@@ -76,6 +78,7 @@ function _upc_users_sync_create() {
  */
 function _upc_users_sync_edit(){
   $edit = unserialize(base64_decode(bakery_decrypt($_POST['form'])));
+  error_log(print_r($user,1));
   $edit = _translate_terms($edit);
   $post = $edit;
   $errors = array();
@@ -101,6 +104,7 @@ function _upc_users_sync_edit(){
       if (!empty($save->uid)) {
         //send to slave
         foreach($slaves as $slave) {
+          error_log('send to : ' . $slave);
           _post_curl($post, $slave . 'users_sync/edit');
         }
       }
@@ -168,6 +172,7 @@ function _user_register_submit($form, &$form_state) {
       //if user save success, send info to slaves
       if(!empty($account->uid )) {
         foreach($slaves as $slave) {
+          error_log('send to : ' . $slave)
           _post_curl($new_account, $slave . 'users_sync');
         }
       }
@@ -177,6 +182,7 @@ function _user_register_submit($form, &$form_state) {
     }
 
   } else {
+    error_log('send to : ' . $master)
     _post_curl($new_account, $master . 'users_sync');
   }
 }
@@ -215,12 +221,14 @@ function _user_profile_submit($form, &$form_state) {
       $save = user_save($account, $edit);
       if (!empty($save->uid)) {
         foreach($slaves as $slave) {
+          error_log('send to : ' . $slave)
           _post_curl($post, $slave . 'users_sync/edit');
         }
       }
     } 
   } else {
     //send to master
+    error_log('send to : ' . $master)
     _post_curl($post, $master . 'users_sync/edit');
   }
 }
@@ -247,6 +255,7 @@ function upc_users_sync_form_alter(&$form, $form_state, $form_id) {
 
 function _post_curl($form,  $url) {
   //cURL version
+  error_log(print_r($form,1));
   $curl = curl_init();
   curl_setopt_array($curl, array(
     CURLOPT_URL => $url,
@@ -258,6 +267,7 @@ function _post_curl($form,  $url) {
     ),
   ));
   $resp = curl_exec($curl);
+  error_log(print_r($resp,1));
   //curl_close($curl);
   if (!$resp) {
     return array('message' => 'Error ' . curl_errno($curl) . ' : ' .  curl_error($curl) ); 
