@@ -172,7 +172,7 @@ function _user_register_submit($form, &$form_state) {
       //if user save success, send info to slaves
       if(!empty($account->uid )) {
         foreach($slaves as $slave) {
-          error_log('send to : ' . $slave)
+          error_log('send to : ' . $slave);
           _post_curl($new_account, $slave . 'users_sync');
         }
       }
