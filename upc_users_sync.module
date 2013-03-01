@@ -32,7 +32,7 @@ function upc_users_sync_menu() {
  *  Create Users
  */
 function _upc_users_sync_create() {
-  $user = unserialize(bakery_decrypt($_POST['form']));
+  $user = unserialize(base64_decode(bakery_decrypt($_POST['form'])));
   $errors = array();
 
   if (_is_master()){
@@ -75,7 +75,7 @@ function _upc_users_sync_create() {
  * Edit users
  */
 function _upc_users_sync_edit(){
-  $edit = unserialize(bakery_decrypt($_POST['form']));
+  $edit = unserialize(base64_decode(bakery_decrypt($_POST['form'])));
   $edit = _translate_terms($edit);
   $post = $edit;
   $errors = array();
@@ -254,7 +254,7 @@ function _post_curl($form,  $url) {
     //CURLOPT_HTTPHEADER => array('Content-type: application/json') ,
     CURLOPT_POST => 1,
     CURLOPT_POSTFIELDS => array(
-        'form' => bakery_encrypt(serialize($form)),
+        'form' => bakery_encrypt(base64_encode(serialize($form))),
     ),
   ));
   $resp = curl_exec($curl);
