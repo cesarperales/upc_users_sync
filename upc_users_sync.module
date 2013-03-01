@@ -32,6 +32,12 @@ function upc_users_sync_menu() {
  *  Create Users
  */
 function _upc_users_sync_create() {
+  //if no post sent to register page
+  if(empty($_POST['form'])) {
+    error_log('no post recibido');
+    drupal_set_message(t('Error al enviar la informacion'));
+    drupal_goto('user/register');
+  }
   $user = unserialize(base64_decode(bakery_decrypt($_POST['form'])));
   error_log(print_r($user,1));
   $errors = array();
