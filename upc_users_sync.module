@@ -39,7 +39,7 @@ function _upc_users_sync_create() {
     drupal_goto('user/register');
   }
   $user = unserialize(base64_decode(bakery_decrypt($_POST['form'])));
-  error_log(print_r($user,1));
+  //error_log(print_r($user,1));
   $errors = array();
 
   if (_is_master()){
@@ -84,7 +84,7 @@ function _upc_users_sync_create() {
  */
 function _upc_users_sync_edit(){
   $edit = unserialize(base64_decode(bakery_decrypt($_POST['form'])));
-  error_log(print_r($user,1));
+  //error_log(print_r($user,1));
   $edit = _translate_terms($edit);
   $post = $edit;
   $errors = array();
@@ -261,7 +261,7 @@ function upc_users_sync_form_alter(&$form, $form_state, $form_id) {
 
 function _post_curl($form,  $url) {
   //cURL version
-  error_log(print_r($form,1));
+  $cookie = base64_encode(serialize($form));
   $curl = curl_init();
   curl_setopt_array($curl, array(
     CURLOPT_URL => $url,
@@ -269,11 +269,10 @@ function _post_curl($form,  $url) {
     //CURLOPT_HTTPHEADER => array('Content-type: application/json') ,
     CURLOPT_POST => 1,
     CURLOPT_POSTFIELDS => array(
-        'form' => bakery_encrypt(base64_encode(serialize($form))),
+        'form' => $cookie,
     ),
   ));
   $resp = curl_exec($curl);
-  error_log(print_r($resp,1));
   //curl_close($curl);
   if (!$resp) {
     return array('message' => 'Error ' . curl_errno($curl) . ' : ' .  curl_error($curl) ); 
