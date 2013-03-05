@@ -67,6 +67,7 @@ function _upc_users_sync_create() {
       }
     }
     //start session
+    drupal_set_message(t('Tu cuenta ha sido creada, te hemos enviado un correo para que puedas activarla.'));
     //$init = _bakery_init_field($account->uid);
     //_bakery_bake_chocolatechip_cookie($account->name, $account->mail, $init);
     //bakery_user_external_login($account);
@@ -177,6 +178,7 @@ function _user_register_submit($form, &$form_state) {
         }
       }
       //inicio sesion bakery
+      drupal_set_message(t('Tu cuenta ha sido creada, te hemos enviado un correo para que puedas activarla.'));
       //$init = _bakery_init_field($account->uid);
       //_bakery_bake_chocolatechip_cookie($account->name, $account->mail, $init);
       //bakery_user_external_login($account);
