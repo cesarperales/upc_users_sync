@@ -418,7 +418,7 @@ function _user_fields(){
 function _get_slaves() {
   //return variable_get('bakery_slaves', array());
   //harcoding to get rid of bakery
-  return array('http://epgdev.beeznest.com/', 'http://epedev.beeznest.com/');
+  return array('http://postgrado.upc.edu.pe/', 'http://epe.upc.edu.pe/');
 }
 /**
  * Master Site
@@ -427,7 +427,7 @@ function _get_slaves() {
 function _get_master() {
   //return  variable_get('bakery_master', 'http://www.upc.edu.pe/');
   //hardcoding to ger rid of bakery
-  return 'http://upcdev.beeznest.com/';
+  return 'http://www.upc.edu.pe/';
 }
 /**
  * Is Master?
@@ -437,5 +437,5 @@ function _get_master() {
 function _is_master() {
   //return  variable_get('bakery_is_master', 0);
   //hardcoding to ger rid of bakery
-  return ($_SERVER['SERVER_NAME'] === 'upcdev.beeznest.com') ? TRUE : FALSE;
+  return ($_SERVER['SERVER_NAME'] === 'www.upc.edu.pe') ? TRUE : FALSE;
 }
