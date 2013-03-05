@@ -253,6 +253,8 @@ function upc_users_sync_form_alter(&$form, $form_state, $form_id) {
     $form['#submit'][] = '_user_register_submit'; 
   }
   if ($form_id == 'user_profile_form') {
+    dpm($form);
+    dpm($form_state);
     //overrides default and bakery submit functions
     $form['field_account_origin']['und'][0]['#access'] = FALSE;
     $form['#submit'] = array();
@@ -303,6 +305,11 @@ function _map_user($post) {
         case 'value': 
           if(!empty($post->{$index}['und'][0]['value'])) {
             $user[$index] = array('und' => array(0 => array('value' => $post->{$index}['und'][0]['value'])));
+          }
+          break;
+        case 'mail':
+          if(!empty($post->{$index}['und'][0]['email'])) {
+            $user[$index] = array('und' => array(0 => array('email' => $post->{$index}['und'][0]['email'])));
           }
           break;
         case 'tid':
@@ -388,7 +395,7 @@ function _user_fields(){
     'field_user_business_hq_ubigeo' => 'tid',
     'field_user_business_hq_urba' => 'value',
     'field_user_business_hq_via' => 'tid',
-    'field_user_business_mail' => 'value',
+    'field_user_business_mail' => 'mail',
     'field_user_business_name' => 'value',
     'field_user_courtesy_title_term' => 'tid', 
     'field_user_firstname' => 'value',
