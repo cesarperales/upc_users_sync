@@ -34,12 +34,10 @@ function upc_users_sync_menu() {
 function _upc_users_sync_create() {
   //if no post sent to register page
   if(empty($_POST['form'])) {
-    error_log('no post recibido');
     drupal_set_message(t('Error al enviar la informacion'));
     drupal_goto('user/register');
   }
   $user = unserialize(base64_decode($_POST['form']));
-  //error_log(print_r($user,1));
   $errors = array();
 
   if (_is_master()){
@@ -65,7 +63,6 @@ function _upc_users_sync_create() {
     if (_is_master() && !empty($account->uid)) {
       $slaves = _get_slaves();
       foreach($slaves as $slave) {
-        error_log('send to : ' . $slave);
         _post_curl($user, $slave . 'users_sync');
       }
     }
@@ -84,7 +81,6 @@ function _upc_users_sync_create() {
  */
 function _upc_users_sync_edit(){
   $edit = unserialize(base64_decode($_POST['form']));
-  //error_log(print_r($user,1));
   $edit = _translate_terms($edit);
   $post = $edit;
   $errors = array();
@@ -110,7 +106,6 @@ function _upc_users_sync_edit(){
       if (!empty($save->uid)) {
         //send to slave
         foreach($slaves as $slave) {
-          error_log('send to : ' . $slave);
           _post_curl($post, $slave . 'users_sync/edit');
         }
       }
@@ -178,7 +173,6 @@ function _user_register_submit($form, &$form_state) {
       //if user save success, send info to slaves
       if(!empty($account->uid )) {
         foreach($slaves as $slave) {
-          error_log('send to : ' . $slave);
           _post_curl($new_account, $slave . 'users_sync');
         }
       }
@@ -189,7 +183,6 @@ function _user_register_submit($form, &$form_state) {
     }
 
   } else {
-    error_log('send to : ' . $master);
     _post_curl($new_account, $master . 'users_sync');
   }
 }
@@ -228,14 +221,12 @@ function _user_profile_submit($form, &$form_state) {
       $save = user_save($account, $edit);
       if (!empty($save->uid)) {
         foreach($slaves as $slave) {
-          error_log('send to : ' . $slave);
           _post_curl($post, $slave . 'users_sync/edit');
         }
       }
     } 
   } else {
     //send to master
-    error_log('send to : ' . $master);
     _post_curl($post, $master . 'users_sync/edit');
   }
 }
@@ -253,8 +244,6 @@ function upc_users_sync_form_alter(&$form, $form_state, $form_id) {
     $form['#submit'][] = '_user_register_submit'; 
   }
   if ($form_id == 'user_profile_form') {
-    dpm($form);
-    dpm($form_state);
     //overrides default and bakery submit functions
     $form['field_account_origin']['und'][0]['#access'] = FALSE;
     $form['#submit'] = array();
