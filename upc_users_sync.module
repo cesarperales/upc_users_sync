@@ -363,6 +363,7 @@ function _user_fields(){
     'name' => 'direct',
     'mail' => 'direct',
     'pass' => 'direct',
+    'roles' => 'direct',
     'timezone' => 'direct',
     'field_permission_marketing' => 'value',
     
